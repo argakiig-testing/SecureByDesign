@@ -11,6 +11,7 @@ This directory contains automated workflows for the Modular Pulumi AWS Framework
 **Duration**: ~5-10 minutes
 
 #### Jobs:
+
 - **Code Quality**: ESLint, Prettier, dependency audit
 - **Test & Build**: Multi-version Node.js testing, coverage reporting
 - **TypeScript Check**: Compilation validation
@@ -19,6 +20,7 @@ This directory contains automated workflows for the Modular Pulumi AWS Framework
 - **Performance**: Bundle size and import performance checks
 
 #### Features:
+
 - ✅ Runs on Node.js 18 and 20
 - ✅ Uploads coverage to Codecov
 - ✅ Validates Pulumi examples
@@ -28,10 +30,11 @@ This directory contains automated workflows for the Modular Pulumi AWS Framework
 ### 2. Release Workflow (`release.yml`)
 
 **Purpose**: Automated package publishing and release management  
-**Triggers**: Version tags (v*.*.*), GitHub releases  
+**Triggers**: Version tags (v*.*.\*), GitHub releases  
 **Duration**: ~10-15 minutes
 
 #### Jobs:
+
 - **Validate Release**: Version validation and testing
 - **Build Release**: Create distribution packages
 - **Security Scan**: Pre-release security checks
@@ -41,6 +44,7 @@ This directory contains automated workflows for the Modular Pulumi AWS Framework
 - **Post-release**: Notifications and status updates
 
 #### Features:
+
 - ✅ Supports prerelease versions (alpha, beta, rc)
 - ✅ Auto-generates changelogs
 - ✅ Creates GitHub releases with artifacts
@@ -54,6 +58,7 @@ This directory contains automated workflows for the Modular Pulumi AWS Framework
 **Duration**: ~5-15 minutes
 
 #### Jobs:
+
 - **Dependency Scan**: npm audit for vulnerabilities
 - **License Scan**: License compliance checking
 - **Code Security**: Security linting and secret detection
@@ -63,6 +68,7 @@ This directory contains automated workflows for the Modular Pulumi AWS Framework
 - **Security Alerting**: Failure notifications
 
 #### Features:
+
 - ✅ Daily automated scans
 - ✅ Vulnerability severity thresholds
 - ✅ License compliance validation
@@ -93,11 +99,11 @@ The workflows require these permissions:
 
 ```yaml
 permissions:
-  contents: write      # For creating releases
-  packages: write      # For publishing packages
-  security-events: write  # For security scanning
-  actions: read        # For workflow access
-  checks: write        # For status checks
+  contents: write # For creating releases
+  packages: write # For publishing packages
+  security-events: write # For security scanning
+  actions: read # For workflow access
+  checks: write # For status checks
 ```
 
 ## 🚀 Usage Examples
@@ -179,14 +185,14 @@ Edit `.github/dependabot.yml`:
 ```yaml
 # Change update frequency
 schedule:
-  interval: "daily"  # Instead of weekly
+  interval: 'daily' # Instead of weekly
 
 # Add new package groups
 groups:
   react-ecosystem:
     patterns:
-      - "react"
-      - "@types/react*"
+      - 'react'
+      - '@types/react*'
 ```
 
 ## 🐛 Troubleshooting
@@ -196,6 +202,7 @@ groups:
 #### CI Failures
 
 **Linting Errors**:
+
 ```bash
 # Fix locally first
 make lint-fix
@@ -203,6 +210,7 @@ make format
 ```
 
 **Test Failures**:
+
 ```bash
 # Debug failing tests
 make test-watch
@@ -210,6 +218,7 @@ npm test -- --verbose
 ```
 
 **Build Errors**:
+
 ```bash
 # Check TypeScript compilation
 make build
@@ -219,10 +228,12 @@ npx tsc --noEmit
 #### Release Failures
 
 **Version Mismatch**:
+
 - Ensure `package.json` version matches git tag
 - Use semantic versioning (e.g., `1.2.3`, `1.2.3-beta.1`)
 
 **npm Publishing**:
+
 - Verify NPM_TOKEN is valid
 - Check package name availability
 - Ensure you have publishing rights
@@ -230,11 +241,13 @@ npx tsc --noEmit
 #### Security Scan Issues
 
 **False Positives**:
+
 - Update `.github/workflows/security.yml` patterns
 - Whitelist specific files/directories
 - Adjust vulnerability thresholds
 
 **Dependency Issues**:
+
 - Review npm audit output
 - Update vulnerable dependencies
 - Use npm overrides if needed
@@ -259,13 +272,15 @@ Enable debug logging in workflows:
 ### Workflow Performance
 
 Monitor workflow execution times:
+
 - **CI**: Target < 10 minutes
-- **Release**: Target < 15 minutes  
+- **Release**: Target < 15 minutes
 - **Security**: Target < 10 minutes
 
 ### Success Rates
 
 Track workflow success rates:
+
 - **CI**: Should be > 95%
 - **Release**: Should be > 98%
 - **Security**: Should be > 90%
@@ -288,4 +303,4 @@ Planned workflow improvements:
 
 ---
 
-For questions about workflows, please open an issue or check the [Contributing Guide](../../CONTRIBUTING.md). 
+For questions about workflows, please open an issue or check the [Contributing Guide](../../CONTRIBUTING.md).

@@ -34,7 +34,7 @@ This framework provides opinionated, modular Pulumi components to rapidly bootst
 ### 1. Prerequisites
 
 - [Pulumi CLI](https://www.pulumi.com/docs/get-started/install/)
-- AWS credentials via `aws configure` or environment variables  
+- AWS credentials via `aws configure` or environment variables
 - Node.js 18+
 - Docker (for local testing with LocalStack)
 
@@ -105,7 +105,7 @@ npm run test:integration:local  # Run integration tests with automatic LocalStac
 
 ```bash
 make localstack-start     # Start LocalStack
-make localstack-stop      # Stop LocalStack  
+make localstack-stop      # Stop LocalStack
 make localstack-status    # Check LocalStack status
 make localstack-logs      # View LocalStack logs
 make localstack-reset     # Reset LocalStack (clean restart)

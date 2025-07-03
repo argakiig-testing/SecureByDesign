@@ -1,7 +1,7 @@
 module.exports = {
   // Global configuration
   coverageReporters: ['text', 'lcov', 'html'],
-  
+
   // Separate configuration for different test types
   projects: [
     {

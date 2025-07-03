@@ -26,9 +26,9 @@ process.env.PULUMI_EXPERIMENTAL = 'true';
 async function waitForLocalStack() {
   const maxRetries = localstackConfig.healthCheck.retries;
   const retryInterval = localstackConfig.healthCheck.interval;
-  
+
   console.log('🔄 Waiting for LocalStack to be ready...');
-  
+
   try {
     // Wait for port to be available
     await waitPort({
@@ -37,7 +37,7 @@ async function waitForLocalStack() {
       timeout: localstackConfig.timeouts.startup,
       output: 'silent',
     });
-    
+
     // Additional health check
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -45,7 +45,7 @@ async function waitForLocalStack() {
         if (response.ok) {
           const health = await response.json();
           const ec2Status = health.services?.ec2 || 'unknown';
-          
+
           if (ec2Status === 'available' || ec2Status === 'running') {
             console.log('✅ LocalStack is ready!');
             return;
@@ -54,12 +54,12 @@ async function waitForLocalStack() {
       } catch (error) {
         // Ignore and retry
       }
-      
+
       if (i < maxRetries - 1) {
         await new Promise(resolve => setTimeout(resolve, retryInterval));
       }
     }
-    
+
     throw new Error('LocalStack health check failed');
   } catch (error) {
     console.error('❌ LocalStack failed to start:', error.message);
@@ -93,4 +93,4 @@ beforeAll(async () => {
 afterAll(async () => {
   // Allow some time for cleanup
   await new Promise(resolve => setTimeout(resolve, 1000));
-}); 
+});

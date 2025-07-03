@@ -5,43 +5,43 @@ services:
     container_name: modinfra-localstack
     image: localstack/localstack:4.5.0
     ports:
-      - "4566:4566"            # LocalStack Gateway
-      - "4510-4559:4510-4559"  # External services port range
+      - '4566:4566' # LocalStack Gateway
+      - '4510-4559:4510-4559' # External services port range
     environment:
       # LocalStack configuration
       DEBUG: ${DEBUG:-0}
       SERVICES: ec2,iam,sts,cloudformation,logs,cloudwatch
       DOCKER_HOST: unix:///var/run/docker.sock
       HOST_TMP_FOLDER: ${TMPDIR:-/tmp/}localstack
-      
+
       # AWS configuration
       AWS_DEFAULT_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
-      
+
       # LocalStack Pro features (optional, requires license)
       # LOCALSTACK_API_KEY: ${LOCALSTACK_API_KEY:-}
-      
+
       # Persistence
       PERSISTENCE: 1
       SNAPSHOT_SAVE_STRATEGY: ON_SHUTDOWN
       SNAPSHOT_LOAD_STRATEGY: ON_STARTUP
-      
+
       # Networking
       HOSTNAME_EXTERNAL: localhost
       LS_LOG: warn
-      
+
       # Development features
       DEVELOP: 1
       DEVELOP_PORT: 5678
-      
+
     volumes:
-      - "${TMPDIR:-/var/lib/localstack}:/var/lib/localstack"
-      - "/var/run/docker.sock:/var/run/docker.sock"
+      - '${TMPDIR:-/var/lib/localstack}:/var/lib/localstack'
+      - '/var/run/docker.sock:/var/run/docker.sock'
     networks:
       - localstack-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566/_localstack/health']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -62,4 +62,4 @@ services:
 
 networks:
   localstack-network:
-    driver: bridge 
+    driver: bridge

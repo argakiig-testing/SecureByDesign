@@ -5,7 +5,7 @@
 module.exports = {
   // LocalStack endpoint configuration
   endpoint: process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566',
-  
+
   // AWS configuration for LocalStack
   aws: {
     region: process.env.AWS_DEFAULT_REGION || 'us-east-1',
@@ -14,30 +14,23 @@ module.exports = {
     endpoint: process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566',
     s3ForcePathStyle: true, // Required for LocalStack S3
   },
-  
+
   // Services to test against
-  services: [
-    'ec2',
-    'iam', 
-    'sts',
-    'cloudformation',
-    'logs',
-    'cloudwatch'
-  ],
-  
+  services: ['ec2', 'iam', 'sts', 'cloudformation', 'logs', 'cloudwatch'],
+
   // Test timeouts
   timeouts: {
-    startup: 30000,      // 30 seconds for LocalStack to start
-    operation: 10000,    // 10 seconds for AWS operations
-    cleanup: 5000,       // 5 seconds for cleanup operations
+    startup: 30000, // 30 seconds for LocalStack to start
+    operation: 10000, // 10 seconds for AWS operations
+    cleanup: 5000, // 5 seconds for cleanup operations
   },
-  
+
   // Retry configuration
   retry: {
     maxAttempts: 3,
     delay: 1000,
   },
-  
+
   // Health check configuration
   healthCheck: {
     endpoint: '/health',
@@ -45,7 +38,7 @@ module.exports = {
     retries: 10,
     interval: 1000,
   },
-  
+
   // Docker configuration (for CI environments)
   docker: {
     image: 'localstack/localstack:3.0',
@@ -68,4 +61,4 @@ module.exports = {
       startPeriod: '30s',
     },
   },
-}; 
+};
