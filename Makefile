@@ -146,34 +146,34 @@ security-check: ## Run comprehensive security checks
 ##@ LocalStack Operations
 localstack-start: ## Start LocalStack for testing
 	@echo "$(BLUE)Starting LocalStack...$(NC)"
-	docker-compose up -d localstack
+	docker compose up -d localstack
 	@echo "$(YELLOW)Waiting for LocalStack to be ready...$(NC)"
 	@sleep 10
 	@echo "$(GREEN)✅ LocalStack started$(NC)"
 
 localstack-stop: ## Stop LocalStack
 	@echo "$(BLUE)Stopping LocalStack...$(NC)"
-	docker-compose down
+	docker compose down
 	@echo "$(GREEN)✅ LocalStack stopped$(NC)"
 
 localstack-status: ## Check LocalStack status
 	@echo "$(BLUE)Checking LocalStack status...$(NC)"
-	@if docker-compose ps localstack | grep -q "Up"; then \
+	@if docker compose ps localstack | grep -q "Up"; then \
 		echo "$(GREEN)✅ LocalStack is running$(NC)"; \
-		curl -s http://localhost:4566/health | jq -r '.services | to_entries[] | "\(.key): \(.value)"' || echo "Health check failed"; \
+		curl -s http://localhost:4566/_localstack/health | jq -r '.services | to_entries[] | "\(.key): \(.value)"' || echo "Health check failed"; \
 	else \
 		echo "$(RED)❌ LocalStack is not running$(NC)"; \
 	fi
 
 localstack-logs: ## Show LocalStack logs
 	@echo "$(BLUE)LocalStack logs:$(NC)"
-	docker-compose logs -f localstack
+	docker compose logs -f localstack
 
 localstack-reset: ## Reset LocalStack (stop, remove, start)
 	@echo "$(BLUE)Resetting LocalStack...$(NC)"
-	docker-compose down
-	docker-compose rm -f localstack
-	docker-compose up -d localstack
+	docker compose down
+	docker compose rm -f localstack
+	docker compose up -d localstack
 	@echo "$(GREEN)✅ LocalStack reset complete$(NC)"
 
 ##@ Pulumi Operations
