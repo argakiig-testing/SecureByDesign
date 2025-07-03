@@ -159,6 +159,7 @@ jobs:
   pulumi-validate:
     name: Pulumi Validation
     runs-on: ubuntu-latest
+    needs: [test]
     if: github.event_name == 'pull_request'
 
     steps:
@@ -180,32 +181,34 @@ jobs:
       - name: Install Pulumi CLI
         uses: pulumi/actions@v6
 
+      - name: Setup examples directory
+        run: |
+          # Install dependencies in examples directory
+          cd examples
+          npm install
+
       - name: Validate Pulumi examples
         run: |
+          # Use the same validation approach as our working Makefile
           cd examples
-          # Create a temporary Pulumi project for validation
-          echo "name: validation-project" > Pulumi.yaml
-          echo "runtime: nodejs" >> Pulumi.yaml
-          echo "description: Validation project for CI" >> Pulumi.yaml
+          
+          # Set up Pulumi project (if not already exists)
+          if [ ! -f "Pulumi.yaml" ]; then
+            echo "name: examples" > Pulumi.yaml
+            echo "runtime: nodejs" >> Pulumi.yaml  
+            echo "description: ModInfra Examples" >> Pulumi.yaml
+          fi
 
-          # Use local backend for CI validation (no cloud login required)
-          pulumi login --local
-          pulumi stack init ci-validation-stack || pulumi stack select ci-validation-stack
+          # Use local backend with passphrase (same as Makefile)
+          PULUMI_CONFIG_PASSPHRASE="dev" pulumi login --local
+          PULUMI_CONFIG_PASSPHRASE="dev" pulumi stack init dev 2>/dev/null || PULUMI_CONFIG_PASSPHRASE="dev" pulumi stack select dev
+          PULUMI_CONFIG_PASSPHRASE="dev" pulumi config set aws:region us-east-1
 
-          # Set basic config
-          pulumi config set aws:region us-east-1
-
-          # Validate TypeScript compilation and Pulumi program structure
-          echo "Validating Pulumi program structure..."
-          node -e "
-            try {
-              require('./basic-vpc');
-              console.log('✅ Pulumi program structure is valid');
-            } catch (error) {
-              console.error('❌ Pulumi program validation failed:', error.message);
-              process.exit(1);
-            }
-          " || echo "Basic validation completed"
+          # Validate Pulumi program structure with preview
+          echo "Validating Pulumi program with preview..."
+          PULUMI_CONFIG_PASSPHRASE="dev" pulumi preview
+        env:
+          PULUMI_CONFIG_PASSPHRASE: "dev"
 
   # Job 6: Documentation check
   docs:
