@@ -10,6 +10,11 @@ on:
     branches: [main]
   workflow_dispatch: # Manual trigger
 
+# Cancel previous security scans for the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: '18'
 
