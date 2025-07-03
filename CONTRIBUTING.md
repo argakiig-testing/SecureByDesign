@@ -22,6 +22,7 @@ make setup
 ```
 
 This will:
+
 - Install npm dependencies
 - Build the TypeScript project
 - Run initial tests

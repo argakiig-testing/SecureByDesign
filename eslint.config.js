@@ -45,20 +45,12 @@ module.exports = [
       'prefer-const': 'error',
       'no-var': 'error',
       'no-unused-vars': 'off', // Turn off base rule
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
   {
     // Override for test files
-    files: [
-      '**/__tests__/**/*.ts',
-      '**/tests/**/*.ts',
-      '**/*.test.ts',
-      '**/*.integration.ts',
-    ],
+    files: ['**/__tests__/**/*.ts', '**/tests/**/*.ts', '**/*.test.ts', '**/*.integration.ts'],
     languageOptions: {
       globals: {
         // Jest globals
@@ -77,4 +69,4 @@ module.exports = [
       'no-console': 'off',
     },
   },
-]; 
+];

@@ -191,7 +191,7 @@ jobs:
         run: |
           # Use the same validation approach as our working Makefile
           cd examples
-          
+
           # Set up Pulumi project (if not already exists)
           if [ ! -f "Pulumi.yaml" ]; then
             echo "name: examples" > Pulumi.yaml
@@ -208,7 +208,7 @@ jobs:
           echo "Validating Pulumi program with preview..."
           PULUMI_CONFIG_PASSPHRASE="dev" pulumi preview
         env:
-          PULUMI_CONFIG_PASSPHRASE: "dev"
+          PULUMI_CONFIG_PASSPHRASE: 'dev'
 
   # Job 6: Documentation check
   docs:
