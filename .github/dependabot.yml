@@ -1,0 +1,90 @@
+# Dependabot configuration for automatic dependency updates
+version: 2
+
+updates:
+  # NPM package updates
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Etc/UTC"
+    
+    # Security updates
+    open-pull-requests-limit: 10
+    
+    # Grouping related updates
+    groups:
+      # Group TypeScript and ESLint updates
+      typescript-ecosystem:
+        patterns:
+          - "typescript"
+          - "@typescript-eslint/*"
+          - "eslint*"
+          - "@types/*"
+      
+      # Group testing dependencies
+      testing:
+        patterns:
+          - "jest"
+          - "@types/jest"
+          - "ts-jest"
+      
+      # Group Pulumi dependencies
+      pulumi-ecosystem:
+        patterns:
+          - "@pulumi/*"
+      
+      # Group AWS dependencies
+      aws-ecosystem:
+        patterns:
+          - "@aws-sdk/*"
+          - "aws-*"
+    
+    # Custom commit messages
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    
+    # Review configuration
+    reviewers:
+      - "platform-team"  # Replace with actual team/users
+    
+    # PR configuration
+    labels:
+      - "dependencies"
+      - "automated"
+    
+    # Ignore specific dependencies that require manual updates
+    ignore:
+      # Ignore major version updates for critical dependencies
+      - dependency-name: "@pulumi/pulumi"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@pulumi/aws"
+        update-types: ["version-update:semver-major"]
+      
+      # Ignore specific problematic packages
+      - dependency-name: "eslint"
+        versions: ["9.x"]  # Example: if version 9 has breaking changes
+
+  # GitHub Actions updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "04:00"
+      timezone: "Etc/UTC"
+    
+    open-pull-requests-limit: 5
+    
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    
+    labels:
+      - "github-actions"
+      - "ci"
+      - "automated" 

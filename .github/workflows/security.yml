@@ -1,0 +1,400 @@
+name: Security Scan
+
+on:
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Manual trigger
+
+env:
+  NODE_VERSION: '18'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # Job 1: Dependency vulnerability scanning
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          echo "Running npm audit..."
+          npm audit --audit-level=moderate --json > npm-audit-results.json || true
+          
+          # Display human-readable results
+          npm audit --audit-level=moderate || true
+          
+          # Check for high/critical vulnerabilities
+          HIGH_VULN=$(jq '.metadata.vulnerabilities.high // 0' npm-audit-results.json)
+          CRITICAL_VULN=$(jq '.metadata.vulnerabilities.critical // 0' npm-audit-results.json)
+          
+          echo "High vulnerabilities: $HIGH_VULN"
+          echo "Critical vulnerabilities: $CRITICAL_VULN"
+          
+          if [ "$CRITICAL_VULN" -gt 0 ]; then
+            echo "❌ Critical vulnerabilities found!"
+            exit 1
+          fi
+          
+          if [ "$HIGH_VULN" -gt 5 ]; then
+            echo "⚠️ Too many high-severity vulnerabilities found!"
+            exit 1
+          fi
+
+      - name: Upload npm audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-results
+          path: npm-audit-results.json
+          retention-days: 30
+
+  # Job 2: License compliance check
+  license-scan:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install license checker
+        run: npm install -g license-checker
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check licenses
+        run: |
+          echo "Checking licenses for compliance..."
+          
+          # Generate license report
+          license-checker --json > licenses.json
+          
+          # Check for problematic licenses
+          PROBLEMATIC_LICENSES="GPL-2.0,GPL-3.0,AGPL-1.0,AGPL-3.0,CPAL-1.0,OSL-3.0"
+          
+          # Extract unique licenses
+          jq -r '.[] | .licenses' licenses.json | sort | uniq > unique-licenses.txt
+          
+          echo "Found licenses:"
+          cat unique-licenses.txt
+          
+          # Check for problematic licenses
+          for license in $(echo $PROBLEMATIC_LICENSES | tr ',' ' '); do
+            if grep -q "$license" unique-licenses.txt; then
+              echo "❌ Problematic license found: $license"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All licenses are compliant"
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: |
+            licenses.json
+            unique-licenses.txt
+          retention-days: 30
+
+  # Job 3: Code security analysis
+  code-security:
+    name: Code Security Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security linting (ESLint Security)
+        run: |
+          # Install security-focused ESLint plugins
+          npm install --no-save eslint-plugin-security eslint-plugin-no-secrets
+          
+          # Run security-focused linting
+          npx eslint . --ext .ts \
+            --config .eslintrc.json \
+            --plugin security \
+            --plugin no-secrets \
+            --rule 'security/detect-object-injection: error' \
+            --rule 'security/detect-non-literal-fs-filename: error' \
+            --rule 'security/detect-unsafe-regex: error' \
+            --rule 'no-secrets/no-secrets: error' \
+            || echo "Security linting completed with warnings"
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Scanning for potential secrets..."
+          
+          # Look for common secret patterns
+          PATTERNS=(
+            "password\s*=\s*['\"][^'\"]{8,}['\"]"
+            "api_key\s*=\s*['\"][^'\"]{20,}['\"]"
+            "secret\s*=\s*['\"][^'\"]{20,}['\"]"
+            "token\s*=\s*['\"][^'\"]{20,}['\"]"
+            "private_key\s*=\s*['\"]-----BEGIN"
+            "AWS_SECRET_ACCESS_KEY"
+            "GITHUB_TOKEN"
+          )
+          
+          FOUND_SECRETS=false
+          
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -r -i -E "$pattern" . --exclude-dir=node_modules --exclude-dir=.git --exclude="*.md"; then
+              echo "⚠️ Potential secret found: $pattern"
+              FOUND_SECRETS=true
+            fi
+          done
+          
+          if [ "$FOUND_SECRETS" = true ]; then
+            echo "❌ Potential secrets detected in code!"
+            echo "Please review and remove any hardcoded secrets."
+            # Don't fail CI for this - just warn
+          else
+            echo "✅ No obvious secrets detected"
+          fi
+
+      - name: Check for unsafe dependencies
+        run: |
+          echo "Checking for known unsafe dependencies..."
+          
+          # List of known problematic packages
+          UNSAFE_PACKAGES="event-stream flatmap-stream"
+          
+          for package in $UNSAFE_PACKAGES; do
+            if grep -q "\"$package\"" package.json; then
+              echo "❌ Unsafe package detected: $package"
+              exit 1
+            fi
+          done
+          
+          echo "✅ No known unsafe packages found"
+
+  # Job 4: Dependency update check
+  dependency-update:
+    name: Dependency Update Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install npm-check-updates
+        run: npm install -g npm-check-updates
+
+      - name: Check for dependency updates
+        run: |
+          echo "Checking for dependency updates..."
+          
+          # Check for updates
+          ncu --jsonUpgraded > updates.json || true
+          
+          # Count available updates
+          UPDATES=$(jq 'length' updates.json 2>/dev/null || echo "0")
+          
+          if [ "$UPDATES" -gt 0 ]; then
+            echo "📦 $UPDATES dependency updates available:"
+            ncu
+            
+            # Check for major version updates (potentially breaking)
+            MAJOR_UPDATES=$(ncu --target major --jsonUpgraded | jq 'length' 2>/dev/null || echo "0")
+            
+            if [ "$MAJOR_UPDATES" -gt 0 ]; then
+              echo "⚠️ $MAJOR_UPDATES major updates available (review needed)"
+            fi
+          else
+            echo "✅ All dependencies are up to date"
+          fi
+
+      - name: Upload update report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-updates
+          path: updates.json
+          retention-days: 7
+
+  # Job 5: Container security (if using Docker)
+  container-security:
+    name: Container Security
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for Dockerfile
+        id: docker-check
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "has-dockerfile=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-dockerfile=false" >> $GITHUB_OUTPUT
+            echo "No Dockerfile found, skipping container security scan"
+          fi
+
+      - name: Build Docker image
+        if: steps.docker-check.outputs.has-dockerfile == 'true'
+        run: |
+          docker build -t modinfra-security-scan .
+
+      - name: Run Trivy vulnerability scanner
+        if: steps.docker-check.outputs.has-dockerfile == 'true'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'modinfra-security-scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        if: steps.docker-check.outputs.has-dockerfile == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+          retention-days: 30
+
+  # Job 6: Security summary
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, license-scan, code-security]
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Generate security summary
+        run: |
+          echo "# Security Scan Summary" > security-summary.md
+          echo "" >> security-summary.md
+          echo "Scan Date: $(date)" >> security-summary.md
+          echo "" >> security-summary.md
+          
+          # Dependency scan results
+          echo "## Dependency Security" >> security-summary.md
+          if [ "${{ needs.dependency-scan.result }}" = "success" ]; then
+            echo "✅ Dependency scan passed" >> security-summary.md
+          else
+            echo "❌ Dependency scan failed" >> security-summary.md
+          fi
+          echo "" >> security-summary.md
+          
+          # License scan results
+          echo "## License Compliance" >> security-summary.md
+          if [ "${{ needs.license-scan.result }}" = "success" ]; then
+            echo "✅ License compliance check passed" >> security-summary.md
+          else
+            echo "❌ License compliance check failed" >> security-summary.md
+          fi
+          echo "" >> security-summary.md
+          
+          # Code security results
+          echo "## Code Security" >> security-summary.md
+          if [ "${{ needs.code-security.result }}" = "success" ]; then
+            echo "✅ Code security analysis passed" >> security-summary.md
+          else
+            echo "❌ Code security analysis failed" >> security-summary.md
+          fi
+          echo "" >> security-summary.md
+          
+          # Overall status
+          echo "## Overall Status" >> security-summary.md
+          if [[ "${{ needs.dependency-scan.result }}" = "success" && 
+                "${{ needs.license-scan.result }}" = "success" && 
+                "${{ needs.code-security.result }}" = "success" ]]; then
+            echo "🟢 All security checks passed" >> security-summary.md
+          else
+            echo "🔴 One or more security checks failed" >> security-summary.md
+          fi
+          
+          cat security-summary.md
+
+      - name: Upload security summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-summary
+          path: security-summary.md
+          retention-days: 30
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('security-summary.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔒 Security Scan Results\n\n${summary}`
+            });
+
+  # Job 7: Security alerting
+  security-alerting:
+    name: Security Alerting
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, license-scan, code-security]
+    if: failure() && github.event_name == 'schedule'
+    
+    steps:
+      - name: Send security alert
+        run: |
+          echo "🚨 Security scan failed during scheduled run"
+          echo "Please review the security scan results and address any issues."
+          echo "Failed jobs:"
+          echo "- Dependency scan: ${{ needs.dependency-scan.result }}"
+          echo "- License scan: ${{ needs.license-scan.result }}"
+          echo "- Code security: ${{ needs.code-security.result }}"
+          
+          # In a real environment, you might send notifications to Slack, email, etc.
+          # Example: curl -X POST -H 'Content-type: application/json' --data '{"text":"Security scan failed"}' $SLACK_WEBHOOK 

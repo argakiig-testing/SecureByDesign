@@ -1,0 +1,68 @@
+{
+  "name": "modular-pulumi-aws-framework",
+  "version": "0.1.0",
+  "description": "Secure-by-default AWS infrastructure made simple with Pulumi",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern=__tests__.*\\.test\\.ts$",
+    "test:integration": "jest --testPathPattern=__tests__.*\\.integration\\.ts$",
+    "test:integration:local": "docker-compose up -d localstack && npm run test:integration && docker-compose down",
+    "preview": "pulumi preview",
+    "up": "pulumi up",
+    "destroy": "pulumi destroy"
+  },
+  "keywords": [
+    "pulumi",
+    "aws",
+    "infrastructure",
+    "security",
+    "typescript",
+    "modular",
+    "iac"
+  ],
+  "author": "Modular Pulumi Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "@pulumi/pulumi": "^3.96.0",
+    "@pulumi/aws": "^6.15.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "jest": "^29.7.0",
+    "prettier": "^3.1.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.8.3",
+    "@aws-sdk/client-ec2": "^3.490.0",
+    "@aws-sdk/client-iam": "^3.490.0",
+    "aws-sdk-client-mock": "^3.0.0",
+    "testcontainers": "^10.4.0",
+    "wait-port": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/modular-pulumi-aws-framework.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/modular-pulumi-aws-framework/issues"
+  },
+  "homepage": "https://github.com/your-org/modular-pulumi-aws-framework#readme"
+}

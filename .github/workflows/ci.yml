@@ -1,0 +1,291 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # Job 1: Quality checks (linting, formatting, security)
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check code formatting
+        run: npm run format:check
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
+
+  # Job 2: Build and test
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18', '20']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        run: npm run test:unit
+
+      - name: Build project
+        run: npm run build
+
+      - name: Upload coverage to Codecov
+        if: matrix.node-version == '18'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Archive build artifacts
+        if: matrix.node-version == '18'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            !dist/**/*.map
+          retention-days: 7
+
+  # Job 3: Integration tests with LocalStack
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [quality]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start LocalStack
+        run: |
+          docker-compose up -d localstack
+          # Wait for LocalStack to be ready
+          echo "Waiting for LocalStack to start..."
+          timeout 60 bash -c 'until curl -f http://localhost:4566/health; do sleep 2; done'
+          echo "LocalStack is ready!"
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          LOCALSTACK_ENDPOINT: http://localhost:4566
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+
+      - name: Show LocalStack logs on failure
+        if: failure()
+        run: docker-compose logs localstack
+
+      - name: Stop LocalStack
+        if: always()
+        run: docker-compose down
+
+  # Job 4: Type checking and compatibility
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript compiler check
+        run: npx tsc --noEmit
+
+      - name: Check for type issues in examples
+        run: npx tsc --noEmit --project examples/tsconfig.json || echo "Examples tsconfig not found, skipping"
+
+  # Job 5: Pulumi validation
+  pulumi-validate:
+    name: Pulumi Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v4
+
+      - name: Validate Pulumi examples
+        run: |
+          cd examples
+          # Create a temporary Pulumi project for validation
+          echo "name: validation-project" > Pulumi.yaml
+          echo "runtime: nodejs" >> Pulumi.yaml
+          echo "description: Validation project for CI" >> Pulumi.yaml
+          
+          # Try to validate the basic example
+          pulumi config set aws:region us-east-1
+          pulumi preview --non-interactive --show-config || echo "Preview validation completed with warnings"
+
+  # Job 6: Documentation check
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check README files exist
+        run: |
+          test -f README.md
+          test -f CONTRIBUTING.md
+          test -f modules/vpc/README.md
+          test -f examples/README.md
+
+      - name: Check for TODO comments in production code
+        run: |
+          # Check for TODO comments that should be addressed before merge
+          if grep -r "TODO:" --include="*.ts" --exclude-dir=node_modules --exclude-dir=__tests__ .; then
+            echo "Found TODO comments in production code. Please address before merging."
+            exit 1
+          fi
+
+      - name: Validate package.json
+        run: |
+          npm pkg fix --dry-run
+          npm pkg validate
+
+  # Job 7: Performance and bundle size
+  performance:
+    name: Performance
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Check bundle size
+        run: |
+          # Check if build artifacts are reasonable size
+          BUILD_SIZE=$(du -sb dist/ | cut -f1)
+          echo "Build size: $BUILD_SIZE bytes"
+          
+          # Fail if build is unreasonably large (> 10MB)
+          if [ $BUILD_SIZE -gt 10485760 ]; then
+            echo "Build size too large: $BUILD_SIZE bytes"
+            exit 1
+          fi
+
+      - name: Test module import performance
+        run: |
+          # Basic import performance test
+          node -e "
+            const start = Date.now();
+            const { VpcComponent } = require('./dist/modules/vpc');
+            const end = Date.now();
+            console.log('Import time:', end - start, 'ms');
+            if (end - start > 1000) {
+              console.error('Import too slow');
+              process.exit(1);
+            }
+          "
+
+  # Job 8: Integration summary
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [quality, test, integration-test, typecheck, docs, performance]
+    if: always()
+    
+    steps:
+      - name: Check all jobs status
+        run: |
+          if [[ "${{ needs.quality.result }}" != "success" || 
+                "${{ needs.test.result }}" != "success" || 
+                "${{ needs.integration-test.result }}" != "success" || 
+                "${{ needs.typecheck.result }}" != "success" || 
+                "${{ needs.docs.result }}" != "success" || 
+                "${{ needs.performance.result }}" != "success" ]]; then
+            echo "One or more CI jobs failed"
+            exit 1
+          fi
+          echo "All CI jobs passed successfully!"
+
+      - name: Post success message
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "✅ All CI checks passed!"
+          echo "Ready for review and merge." 

@@ -1,0 +1,15 @@
+name: modular-pulumi-aws-framework
+runtime: nodejs
+description: Secure-by-default AWS infrastructure made simple
+
+config:
+  aws:region:
+    description: The AWS region to deploy to
+    default: us-east-1
+
+template:
+  description: A template for building secure, modular AWS infrastructure with Pulumi
+  config:
+    aws:region:
+      description: The AWS region to deploy to
+      default: us-east-1

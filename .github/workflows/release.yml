@@ -1,0 +1,334 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0
+  release:
+    types: [published]
+
+env:
+  NODE_VERSION: '18'
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  # Job 1: Validate release
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is-prerelease: ${{ steps.version.outputs.is-prerelease }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Extract version information
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Check if this is a prerelease (contains alpha, beta, rc)
+          if [[ $VERSION =~ (alpha|beta|rc) ]]; then
+            echo "is-prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is-prerelease=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Release version: $VERSION"
+          echo "Is prerelease: $(echo '${{ steps.version.outputs.is-prerelease }}')"
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+            echo "Invalid version format: $VERSION"
+            exit 1
+          fi
+
+      - name: Check package.json version matches tag
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${{ steps.version.outputs.version }}"
+          
+          if [[ "$PACKAGE_VERSION" != "$TAG_VERSION" ]]; then
+            echo "Version mismatch: package.json ($PACKAGE_VERSION) != tag ($TAG_VERSION)"
+            exit 1
+          fi
+
+      - name: Run full test suite
+        run: npm run ci
+
+  # Job 2: Build release artifacts
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Generate TypeScript declarations
+        run: |
+          # Ensure type declarations are properly generated
+          find dist/ -name "*.d.ts" | head -5
+
+      - name: Create release archive
+        run: |
+          # Create a clean package for distribution
+          mkdir -p release-package
+          
+          # Copy essential files
+          cp -r dist/ release-package/
+          cp package.json release-package/
+          cp README.md release-package/
+          cp LICENSE* release-package/ 2>/dev/null || true
+          
+          # Create tarball
+          tar -czf modular-pulumi-aws-framework-${{ needs.validate.outputs.version }}.tar.gz -C release-package .
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.validate.outputs.version }}
+          path: |
+            modular-pulumi-aws-framework-*.tar.gz
+            dist/
+          retention-days: 30
+
+  # Job 3: Security scan before release
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: |
+          npm audit --audit-level=high
+          npm run deps-audit
+
+      - name: Check for known vulnerabilities
+        run: |
+          # Additional security checks can be added here
+          echo "Security scan completed"
+
+  # Job 4: Publish to npm
+  publish-npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: [validate, build, security]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Configure npm for publishing
+        run: |
+          # Set npm authentication
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm (stable)
+        if: needs.validate.outputs.is-prerelease == 'false'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm (prerelease)
+        if: needs.validate.outputs.is-prerelease == 'true'
+        run: npm publish --access public --tag beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Job 5: Publish to GitHub Packages
+  publish-github:
+    name: Publish to GitHub Packages
+    runs-on: ubuntu-latest
+    needs: [validate, build, security]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          registry-url: 'https://npm.pkg.github.com'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Configure package for GitHub
+        run: |
+          # Update package.json for GitHub Packages
+          jq '.name = "@${{ github.repository_owner }}/modular-pulumi-aws-framework"' package.json > package-github.json
+          mv package-github.json package.json
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Job 6: Create GitHub Release
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for changelog
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.validate.outputs.version }}
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Generate changelog since last tag
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${{ github.ref_name }}$" | head -1)
+          
+          if [ -n "$PREV_TAG" ]; then
+            echo "## Changes since $PREV_TAG" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            git log --oneline --no-merges $PREV_TAG..${{ github.ref_name }} | \
+              sed 's/^/- /' >> CHANGELOG.md
+          else
+            echo "## Initial Release" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "First release of the Modular Pulumi AWS Framework" >> CHANGELOG.md
+          fi
+          
+          # Set changelog content for the release
+          echo 'changelog<<EOF' >> $GITHUB_OUTPUT
+          cat CHANGELOG.md >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ needs.validate.outputs.version }}
+          body: |
+            # Modular Pulumi AWS Framework v${{ needs.validate.outputs.version }}
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## Installation
+            
+            ```bash
+            npm install modular-pulumi-aws-framework@${{ needs.validate.outputs.version }}
+            ```
+            
+            ## Documentation
+            
+            - [README](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/README.md)
+            - [VPC Module](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/modules/vpc/README.md)
+            - [Examples](https://github.com/${{ github.repository }}/tree/${{ github.ref_name }}/examples)
+            
+            ## Verification
+            
+            All releases are automatically tested and verified before publishing.
+          draft: false
+          prerelease: ${{ needs.validate.outputs.is-prerelease == 'true' }}
+
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./modular-pulumi-aws-framework-${{ needs.validate.outputs.version }}.tar.gz
+          asset_name: modular-pulumi-aws-framework-${{ needs.validate.outputs.version }}.tar.gz
+          asset_content_type: application/gzip
+
+  # Job 7: Post-release tasks
+  post-release:
+    name: Post Release Tasks
+    runs-on: ubuntu-latest
+    needs: [validate, publish-npm, publish-github, github-release]
+    if: always() && needs.validate.result == 'success'
+    
+    steps:
+      - name: Notify on success
+        if: needs.publish-npm.result == 'success'
+        run: |
+          echo "✅ Successfully released v${{ needs.validate.outputs.version }}"
+          echo "📦 Published to npm: https://www.npmjs.com/package/modular-pulumi-aws-framework"
+          echo "🏷️ GitHub Release: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.validate.outputs.version }}"
+
+      - name: Notify on failure
+        if: needs.publish-npm.result == 'failure' || needs.publish-github.result == 'failure'
+        run: |
+          echo "❌ Release process failed for v${{ needs.validate.outputs.version }}"
+          echo "Please check the workflow logs and retry if needed."
+          exit 1 
