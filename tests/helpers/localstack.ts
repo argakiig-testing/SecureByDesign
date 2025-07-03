@@ -77,7 +77,7 @@ export async function verifyVpcExists(ec2Client: EC2Client, vpcId: string): Prom
       })
     );
     return Boolean(response.Vpcs && response.Vpcs.length > 0);
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -93,7 +93,7 @@ export async function verifySubnetExists(ec2Client: EC2Client, subnetId: string)
       })
     );
     return Boolean(response.Subnets && response.Subnets.length > 0);
-  } catch (error) {
+  } catch {
     return false;
   }
 }

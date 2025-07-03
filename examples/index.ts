@@ -6,4 +6,4 @@
  */
 
 // Import the basic VPC example
-export * from './basic-vpc'; 
+export * from './basic-vpc';
