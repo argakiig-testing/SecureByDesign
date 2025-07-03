@@ -51,7 +51,7 @@
     "@aws-sdk/client-ec2": "^3.490.0",
     "@aws-sdk/client-iam": "^3.490.0",
     "aws-sdk-client-mock": "^3.0.0",
-    "testcontainers": "^10.4.0",
+    "testcontainers": "^11.0.3",
     "wait-port": "^1.1.0"
   },
   "engines": {
