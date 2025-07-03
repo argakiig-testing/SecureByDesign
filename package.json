@@ -50,7 +50,7 @@
     "typescript": "^5.8.3",
     "@aws-sdk/client-ec2": "^3.490.0",
     "@aws-sdk/client-iam": "^3.490.0",
-    "aws-sdk-client-mock": "^3.0.0",
+    "aws-sdk-client-mock": "^4.1.0",
     "testcontainers": "^11.0.3",
     "wait-port": "^1.1.0"
   },
@@ -59,10 +59,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/modular-pulumi-aws-framework.git"
+    "url": "git+https://github.com/argakiig-testing/SecureByDesign.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/modular-pulumi-aws-framework/issues"
+    "url": "https://github.com/argakiig-testing/SecureByDesign/issues"
   },
-  "homepage": "https://github.com/your-org/modular-pulumi-aws-framework#readme"
+  "homepage": "https://github.com/argakiig-testing/SecureByDesign#readme"
 }
