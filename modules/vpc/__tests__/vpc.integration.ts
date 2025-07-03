@@ -146,7 +146,7 @@ describe('VPC Integration Tests', () => {
           // LocalStack should be running EC2 service
           expect(health.services).toBeDefined();
         }
-      } catch (error) {
+      } catch {
         // If LocalStack is not running, skip this test
         console.warn('LocalStack not available, skipping connectivity test');
       }

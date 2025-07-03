@@ -2,6 +2,20 @@
 
 This directory contains working examples demonstrating how to use the Modular Pulumi AWS Framework modules.
 
+## 📁 Structure
+
+The examples directory is set up as a complete Pulumi project:
+
+```
+examples/
+├── index.ts          # Main entry point (imports all examples)
+├── basic-vpc.ts      # Basic VPC example
+├── package.json      # Pulumi dependencies
+├── tsconfig.json     # TypeScript configuration
+├── Pulumi.yaml       # Pulumi project configuration
+└── README.md         # This file
+```
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -9,24 +23,48 @@ This directory contains working examples demonstrating how to use the Modular Pu
 1. **Pulumi CLI** installed
 2. **AWS credentials** configured (`aws configure` or environment variables)
 3. **Node.js 18+** installed
-4. **Dependencies** installed (`npm install` from project root)
+4. **Project setup complete** (`make setup` from project root)
+5. **Dependencies** installed in examples directory (`npm install` here)
 
 ### Running Examples
 
-Each example is a self-contained Pulumi program:
+Examples are run through the main project's Makefile commands:
 
 ```bash
-# Navigate to project root
-cd ..
+# From the project root:
+
+# Validate the Pulumi configuration and preview infrastructure
+make validate
 
 # Preview infrastructure changes
-pulumi preview --cwd examples/
+make preview
 
-# Deploy infrastructure
-pulumi up --cwd examples/
+# Preview against LocalStack (no AWS costs)
+make preview-local
+
+# Deploy infrastructure (costs apply!)
+make up
 
 # Destroy infrastructure
-pulumi destroy --cwd examples/
+make destroy
+
+# Show stack information
+make stack-info
+```
+
+Or run Pulumi commands directly from examples directory:
+
+```bash
+# From examples/ directory:
+
+# Preview infrastructure changes
+PULUMI_CONFIG_PASSPHRASE="dev" pulumi preview
+
+# Deploy infrastructure
+PULUMI_CONFIG_PASSPHRASE="dev" pulumi up
+
+# Destroy infrastructure
+PULUMI_CONFIG_PASSPHRASE="dev" pulumi destroy
 ```
 
 ## 📁 Available Examples
@@ -98,17 +136,32 @@ const service = new EcsService('app', {
 
 ## 🧪 Testing Examples
 
-Validate examples before deployment:
+### Development and Validation
+
+From the project root, use the comprehensive testing workflow:
 
 ```bash
-# Lint examples
-npm run lint examples/
+# Complete validation (recommended)
+make ci
 
-# Type check
-npm run build
+# Individual validation steps
+make build               # Build TypeScript and validate imports
+make validate            # Validate Pulumi infrastructure plan
+make lint                # Lint all code including examples
 
-# Test with preview
-pulumi preview --cwd examples/
+# Test against LocalStack (no AWS costs)
+make preview-local       # Preview infrastructure against LocalStack
+```
+
+### Manual Testing
+
+```bash
+# From project root - validate Pulumi program structure
+make validate
+
+# From examples directory - preview specific changes
+cd examples
+PULUMI_CONFIG_PASSPHRASE="dev" pulumi preview
 ```
 
 ## 💰 Cost Management

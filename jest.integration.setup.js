@@ -78,7 +78,7 @@ beforeAll(async () => {
     console.error('\n🚨 LocalStack Integration Test Setup Failed');
     console.error('');
     console.error('To run integration tests, start LocalStack first:');
-    console.error('  docker-compose up -d localstack');
+    console.error('  docker compose up -d localstack');
     console.error('');
     console.error('Or run integration tests with LocalStack:');
     console.error('  npm run test:integration:local');

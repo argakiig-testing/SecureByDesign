@@ -14,9 +14,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:unit": "jest --testPathPattern=__tests__.*\\.test\\.ts$",
-    "test:integration": "jest --testPathPattern=__tests__.*\\.integration\\.ts$",
-    "test:integration:local": "docker-compose up -d localstack && npm run test:integration && docker-compose down",
+    "test:unit": "jest --testPathPatterns=__tests__.*\\.test\\.ts$",
+    "test:integration": "jest --testPathPatterns=__tests__.*\\.integration\\.ts$",
+    "test:integration:local": "docker compose up -d localstack && npm run test:integration && docker compose down",
     "preview": "pulumi preview",
     "up": "pulumi up",
     "destroy": "pulumi destroy"
@@ -33,24 +33,24 @@
   "author": "Modular Pulumi Contributors",
   "license": "MIT",
   "dependencies": {
-    "@pulumi/pulumi": "^3.96.0",
-    "@pulumi/aws": "^6.15.0"
+    "@pulumi/pulumi": "^3.181.0",
+    "@pulumi/aws": "^6.83.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.10",
-    "@typescript-eslint/eslint-plugin": "^8.21.0",
-    "@typescript-eslint/parser": "^8.21.0",
-    "eslint": "^8.54.0",
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/parser": "^8.35.0",
+    "eslint": "^9.30.1",
     "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-prettier": "^5.0.1",
+    "eslint-plugin-prettier": "^5.5.1",
     "jest": "^30.0.4",
-    "prettier": "^3.1.0",
-    "ts-jest": "^29.1.1",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.0",
     "typescript": "^5.8.3",
-    "@aws-sdk/client-ec2": "^3.490.0",
-    "@aws-sdk/client-iam": "^3.490.0",
-    "aws-sdk-client-mock": "^3.0.0",
+    "@aws-sdk/client-ec2": "^3.842.0",
+    "@aws-sdk/client-iam": "^3.840.0",
+    "aws-sdk-client-mock": "^4.1.0",
     "testcontainers": "^11.0.3",
     "wait-port": "^1.1.0"
   },
@@ -59,10 +59,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/modular-pulumi-aws-framework.git"
+    "url": "git+https://github.com/argakiig-testing/SecureByDesign.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/modular-pulumi-aws-framework/issues"
+    "url": "https://github.com/argakiig-testing/SecureByDesign/issues"
   },
-  "homepage": "https://github.com/your-org/modular-pulumi-aws-framework#readme"
+  "homepage": "https://github.com/argakiig-testing/SecureByDesign#readme"
 }

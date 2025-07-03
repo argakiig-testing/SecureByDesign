@@ -48,14 +48,9 @@ updates:
       prefix-development: 'deps-dev'
       include: 'scope'
 
-    # Review configuration
-    reviewers:
-      - 'platform-team' # Replace with actual team/users
-
     # PR configuration
     labels:
-      - 'dependencies'
-      - 'automated'
+      - 'dependabot'
 
     # Ignore specific dependencies that require manual updates
     ignore:
@@ -85,6 +80,4 @@ updates:
       include: 'scope'
 
     labels:
-      - 'github-actions'
-      - 'ci'
-      - 'automated'
+      - 'dependabot'

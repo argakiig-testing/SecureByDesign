@@ -6,7 +6,7 @@
 // Export implemented modules
 export * from '../modules/vpc';
 
-// TODO: Export additional modules as they are implemented
+// Additional modules will be exported as they are implemented:
 // export * from '../modules/ecs';
 // export * from '../modules/s3';
 // export * from '../modules/iam';

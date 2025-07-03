@@ -38,44 +38,75 @@ This framework provides opinionated, modular Pulumi components to rapidly bootst
 - Node.js 18+
 - Docker (for local testing with LocalStack)
 
-### 2. Create Your Stack
+### 2. Clone and Setup
 
 ```bash
-pulumi new aws-typescript -n my-secure-infra
-cd my-secure-infra
+git clone https://github.com/your-org/modular-pulumi-aws-framework.git
+cd modular-pulumi-aws-framework
+make setup
 ```
 
-### 3. Add the Framework
+### 3. Validate the Framework
 
 ```bash
-npm install @modinfra/vpc @modinfra/ecs @modinfra/s3
+# Validate Pulumi configuration and infrastructure plan
+make validate
+
+# Run complete development workflow
+make ci
 ```
 
-> (Coming soon: install as a single umbrella package)
+### 4. Try the Examples
+
+```bash
+# Preview example infrastructure
+make preview
+
+# Deploy example infrastructure (optional - costs apply)
+make up
+```
 
 ---
 
 ## ✍️ Example
 
 ```ts
-import * as modinfra from '@modinfra';
+import { VpcComponent } from '../modules/vpc';
 
-// Create a secure VPC
-const network = new modinfra.Vpc('main', {
-  cidrBlock: '10.0.0.0/16',
-  enableNatGateway: true,
+// Create a secure VPC with secure defaults
+const network = new VpcComponent('example', {
+  name: 'example',
+  tags: {
+    Environment: 'development',
+    Project: 'modinfra-example',
+    Owner: 'platform-team',
+  },
 });
 
-// Deploy a secure ECS service
-const service = new modinfra.EcsService('app', {
-  vpc: network.vpc,
-  containerImage: 'nginx',
-});
+// Export outputs for use by other stacks
+export const vpcId = network.vpcId;
+export const publicSubnetIds = network.publicSubnetIds;
+export const privateSubnetIds = network.privateSubnetIds;
 ```
 
 ---
 
 ## 🧪 Local Development & Testing
+
+### Development Workflow
+
+The framework includes a comprehensive development workflow with validation:
+
+```bash
+# Complete development pipeline
+make ci                   # Run tests, lint, build, validate
+
+# Individual development steps
+make build                # Build TypeScript
+make test                 # Run all tests
+make lint                 # Run linting
+make validate             # Validate Pulumi infrastructure
+```
 
 ### Testing Without AWS Costs
 
@@ -87,6 +118,9 @@ make localstack-start
 
 # Run integration tests against LocalStack
 npm run test:integration
+
+# Preview infrastructure against LocalStack
+make preview-local
 
 # Stop LocalStack when done
 make localstack-stop
@@ -109,6 +143,17 @@ make localstack-stop      # Stop LocalStack
 make localstack-status    # Check LocalStack status
 make localstack-logs      # View LocalStack logs
 make localstack-reset     # Reset LocalStack (clean restart)
+```
+
+### Pulumi Operations
+
+```bash
+make validate             # Validate Pulumi program (same as CI)
+make preview              # Preview infrastructure changes
+make preview-local        # Preview against LocalStack
+make up                   # Deploy infrastructure (real AWS - costs apply)
+make destroy              # Destroy infrastructure
+make stack-info           # Show current stack information
 ```
 
 ---

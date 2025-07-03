@@ -1,0 +1,39 @@
+# Code Owners for Modular Pulumi AWS Framework
+# This file defines who should review pull requests for different parts of the codebase
+
+# Global fallback - all files not covered by more specific rules
+* @argakiig
+
+# Package.json and dependency files - require review for security
+package.json @argakiig
+package-lock.json @argakiig
+npm-shrinkwrap.json @argakiig
+
+# TypeScript configuration
+tsconfig.json @argakiig
+.eslintrc.json @argakiig
+
+# CI/CD and automation files
+/.github/ @argakiig
+Makefile @argakiig
+docker-compose.yml @argakiig
+
+# Documentation - can be reviewed by broader team
+*.md @argakiig
+/docs/ @argakiig
+
+# Core modules - require careful review
+/modules/ @argakiig
+/src/ @argakiig
+
+# Test files - important for quality
+**/__tests__/ @argakiig
+/tests/ @argakiig
+jest.*.js @argakiig
+
+# LocalStack and testing infrastructure
+localstack.config.js @argakiig
+docker-compose.yml @argakiig
+
+# Dependabot PRs - automatic dependency updates
+# Note: These will be auto-assigned to the repository owner 

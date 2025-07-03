@@ -54,7 +54,7 @@ module.exports = {
       HOSTNAME_EXTERNAL: 'localhost',
     },
     healthCheck: {
-      test: ['CMD', 'curl', '-f', 'http://localhost:4566/health'],
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566/_localstack/health'],
       interval: '10s',
       timeout: '5s',
       retries: 5,

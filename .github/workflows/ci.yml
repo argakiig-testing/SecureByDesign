@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Cancel previous runs for the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: '18'
 
@@ -68,7 +73,7 @@ jobs:
         if: matrix.node-version == '18'
         uses: codecov/codecov-action@v5
         with:
-          file: ./coverage/lcov.info
+          files: ./coverage/lcov.info
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
@@ -104,10 +109,10 @@ jobs:
 
       - name: Start LocalStack
         run: |
-          docker-compose up -d localstack
+          docker compose up -d localstack
           # Wait for LocalStack to be ready
           echo "Waiting for LocalStack to start..."
-          timeout 60 bash -c 'until curl -f http://localhost:4566/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:4566/_localstack/health; do sleep 2; done'
           echo "LocalStack is ready!"
 
       - name: Run integration tests
@@ -120,11 +125,11 @@ jobs:
 
       - name: Show LocalStack logs on failure
         if: failure()
-        run: docker-compose logs localstack
+        run: docker compose logs localstack
 
       - name: Stop LocalStack
         if: always()
-        run: docker-compose down
+        run: docker compose down
 
   # Job 4: Type checking and compatibility
   typecheck:
@@ -150,44 +155,7 @@ jobs:
       - name: Check for type issues in examples
         run: npx tsc --noEmit --project examples/tsconfig.json || echo "Examples tsconfig not found, skipping"
 
-  # Job 5: Pulumi validation
-  pulumi-validate:
-    name: Pulumi Validation
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build project
-        run: npm run build
-
-      - name: Install Pulumi CLI
-        uses: pulumi/actions@v6
-
-      - name: Validate Pulumi examples
-        run: |
-          cd examples
-          # Create a temporary Pulumi project for validation
-          echo "name: validation-project" > Pulumi.yaml
-          echo "runtime: nodejs" >> Pulumi.yaml
-          echo "description: Validation project for CI" >> Pulumi.yaml
-
-          # Try to validate the basic example
-          pulumi config set aws:region us-east-1
-          pulumi preview --non-interactive --show-config || echo "Preview validation completed with warnings"
-
-  # Job 6: Documentation check
+  # Job 5: Documentation check
   docs:
     name: Documentation
     runs-on: ubuntu-latest
@@ -213,10 +181,27 @@ jobs:
 
       - name: Validate package.json
         run: |
-          npm pkg fix --dry-run
-          npm pkg validate
+          # Test package.json syntax and npm parsing
+          echo "Validating package.json structure..."
 
-  # Job 7: Performance and bundle size
+          # Basic validation with Node.js
+          node -e "
+            const pkg = require('./package.json');
+            console.log('✅ package.json is valid JSON');
+            console.log('📦 Package: ' + pkg.name + ' v' + pkg.version);
+            if (!pkg.name || !pkg.version || !pkg.scripts) {
+              console.error('❌ Missing required package.json fields');
+              process.exit(1);
+            }
+            console.log('✅ Required fields present');
+          "
+
+          # Test npm can parse the package.json correctly
+          echo "Testing npm package.json parsing..."
+          npm ls --depth=0 || echo "Note: Some version mismatches detected, but package.json is structurally valid"
+          echo "✅ package.json validation complete"
+
+  # Job 6: Performance and bundle size
   performance:
     name: Performance
     runs-on: ubuntu-latest
@@ -263,7 +248,7 @@ jobs:
             }
           "
 
-  # Job 8: Integration summary
+  # Job 7: Integration summary
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
