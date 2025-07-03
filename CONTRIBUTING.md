@@ -13,11 +13,19 @@ git clone https://github.com/your-username/modular-pulumi-aws-framework.git
 cd modular-pulumi-aws-framework
 ```
 
-### 2. Install Dependencies
+### 2. Setup Development Environment
+
+Complete project setup with all dependencies and tools:
 
 ```bash
-npm install
+make setup
 ```
+
+This will:
+- Install npm dependencies
+- Build the TypeScript project
+- Run initial tests
+- Verify all prerequisites
 
 ### 3. Set Up LocalStack (Optional)
 
@@ -45,13 +53,19 @@ git checkout -b feat/your-feature-name
 
 ### 6. Test Your Code
 
-Run the comprehensive test suite:
+Run the comprehensive test suite and validation:
 
 ```bash
-# Run all tests (unit + integration with LocalStack)
-npm test
+# Run complete CI pipeline (recommended)
+make ci
 
-# Or run tests separately:
+# Or run individual steps:
+make build                           # Build TypeScript
+make test                           # Run all tests
+make lint                           # Run linting
+make validate                       # Validate Pulumi infrastructure
+
+# Run tests separately:
 npm run test:unit                    # Unit tests only
 npm run test:integration:local       # Integration tests with LocalStack
 ```
@@ -59,7 +73,14 @@ npm run test:integration:local       # Integration tests with LocalStack
 Make sure your code compiles and works as expected:
 
 ```bash
-pulumi preview
+# Validate infrastructure plan
+make validate
+
+# Preview against LocalStack (no costs)
+make preview-local
+
+# Preview against real AWS (requires credentials)
+make preview
 ```
 
 ### 7. Commit & Push
@@ -127,11 +148,38 @@ make localstack-stop
 ### Available Make Commands
 
 ```bash
+# Development workflow
 make help                 # Show all available commands
 make setup               # Complete project setup
+make ci                  # Run complete CI pipeline
+make build               # Build TypeScript project
 make test                # Run all tests
+make lint                # Run ESLint
+make format              # Format code with Prettier
+
+# Testing
+make test-unit           # Run unit tests only
 make test-integration    # Run integration tests
-make localstack-*        # LocalStack management commands
+make test-integration-local  # Run integration tests with LocalStack startup
+
+# Pulumi operations
+make validate            # Validate Pulumi program (same as CI)
+make preview             # Preview infrastructure changes
+make preview-local       # Preview against LocalStack
+make up                  # Deploy infrastructure (real AWS - costs apply)
+make destroy             # Destroy infrastructure
+make stack-info          # Show stack information
+
+# LocalStack management
+make localstack-start    # Start LocalStack
+make localstack-stop     # Stop LocalStack
+make localstack-status   # Check LocalStack status
+make localstack-logs     # View LocalStack logs
+make localstack-reset    # Reset LocalStack (clean restart)
+
+# Utilities
+make clean               # Clean build artifacts
+make info                # Show project information
 ```
 
 ---

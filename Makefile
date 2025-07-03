@@ -1,7 +1,7 @@
 # Modular Pulumi AWS Framework - Makefile
 # Automates common development tasks
 
-.PHONY: help setup install build test test-watch test-coverage lint lint-fix format format-check clean preview up destroy deps-update deps-audit security-check all ci
+.PHONY: help setup install build test test-watch test-coverage lint lint-fix format format-check clean preview validate up destroy deps-update deps-audit security-check all ci
 
 # Default target
 .DEFAULT_GOAL := help
@@ -179,46 +179,61 @@ localstack-reset: ## Reset LocalStack (stop, remove, start)
 ##@ Pulumi Operations
 preview: ## Preview infrastructure changes (examples)
 	@echo "$(BLUE)Previewing infrastructure changes...$(NC)"
-	@if [ ! -f "examples/Pulumi.yaml" ]; then \
-		echo "$(YELLOW)⚠️  No Pulumi project found in examples/. Creating...$(NC)"; \
-		cd examples && pulumi new --force --yes --name examples --description "ModInfra Examples" --stack dev --config aws:region=us-east-1; \
-	fi
-	cd examples && pulumi preview
+	@$(MAKE) _setup-pulumi-project
+	cd examples && PULUMI_CONFIG_PASSPHRASE="dev" pulumi preview
 	@echo "$(GREEN)✅ Preview complete$(NC)"
 
 preview-local: ## Preview infrastructure changes against LocalStack
 	@echo "$(BLUE)Previewing infrastructure changes against LocalStack...$(NC)"
 	@$(MAKE) localstack-start
-	@if [ ! -f "examples/Pulumi.yaml" ]; then \
-		echo "$(YELLOW)⚠️  No Pulumi project found in examples/. Creating...$(NC)"; \
-		cd examples && pulumi new --force --yes --name examples --description "ModInfra Examples" --stack dev --config aws:region=us-east-1; \
-	fi
-	cd examples && AWS_ENDPOINT_URL=http://localhost:4566 pulumi preview
+	@$(MAKE) _setup-pulumi-project
+	cd examples && PULUMI_CONFIG_PASSPHRASE="dev" AWS_ENDPOINT_URL=http://localhost:4566 pulumi preview
 	@echo "$(GREEN)✅ Preview against LocalStack complete$(NC)"
 
 up: ## Deploy infrastructure (examples)
 	@echo "$(BLUE)Deploying infrastructure...$(NC)"
 	@echo "$(YELLOW)⚠️  This will deploy real AWS resources and incur costs!$(NC)"
 	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ]
-	cd examples && pulumi up
+	@$(MAKE) _setup-pulumi-project
+	cd examples && PULUMI_CONFIG_PASSPHRASE="dev" pulumi up
 	@echo "$(GREEN)✅ Deployment complete$(NC)"
 
 destroy: ## Destroy infrastructure (examples)
 	@echo "$(BLUE)Destroying infrastructure...$(NC)"
 	@echo "$(RED)⚠️  This will permanently delete AWS resources!$(NC)"
 	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ]
-	cd examples && pulumi destroy
+	@$(MAKE) _setup-pulumi-project
+	cd examples && PULUMI_CONFIG_PASSPHRASE="dev" pulumi destroy
 	@echo "$(GREEN)✅ Destruction complete$(NC)"
 
+_setup-pulumi-project: ## Internal: Set up Pulumi project and stack
+	@if [ ! -f "examples/Pulumi.yaml" ]; then \
+		echo "$(YELLOW)⚠️  No Pulumi project found in examples/. Creating...$(NC)"; \
+		echo "name: examples" > examples/Pulumi.yaml; \
+		echo "runtime: nodejs" >> examples/Pulumi.yaml; \
+		echo "description: ModInfra Examples" >> examples/Pulumi.yaml; \
+	fi
+	@echo "$(BLUE)Setting up Pulumi backend and stack...$(NC)"
+	cd examples && PULUMI_CONFIG_PASSPHRASE="dev" pulumi login --local
+	cd examples && (PULUMI_CONFIG_PASSPHRASE="dev" pulumi stack init dev 2>/dev/null || PULUMI_CONFIG_PASSPHRASE="dev" pulumi stack select dev)
+	cd examples && PULUMI_CONFIG_PASSPHRASE="dev" pulumi config set aws:region us-east-1
+	@echo "$(GREEN)✅ Pulumi project setup complete$(NC)"
+
+validate: ## Validate Pulumi program (same as CI)
+	@echo "$(BLUE)Validating Pulumi program...$(NC)"
+	@$(MAKE) _setup-pulumi-project
+	cd examples && PULUMI_CONFIG_PASSPHRASE="dev" pulumi preview
+	@echo "$(GREEN)✅ Pulumi validation complete$(NC)"
+
 stack-info: ## Show Pulumi stack information
-	@if [ -d "examples/.pulumi" ]; then \
-		cd examples && pulumi stack; \
+	@if [ -f "examples/Pulumi.yaml" ]; then \
+		cd examples && PULUMI_CONFIG_PASSPHRASE="dev" pulumi stack; \
 	else \
-		echo "$(YELLOW)No Pulumi stack found in examples/$(NC)"; \
+		echo "$(YELLOW)No Pulumi project found in examples/$(NC)"; \
 	fi
 
 ##@ CI/CD
-ci: ## Run full CI pipeline (tests, lint, build)
+ci: ## Run full CI pipeline (tests, lint, build, validate)
 	@echo "$(BLUE)Running CI pipeline...$(NC)"
 	@$(MAKE) check-prereqs
 	@$(MAKE) install
@@ -226,6 +241,7 @@ ci: ## Run full CI pipeline (tests, lint, build)
 	@$(MAKE) format-check
 	@$(MAKE) build
 	@$(MAKE) test-coverage
+	@$(MAKE) validate
 	@$(MAKE) security-check
 	@echo "$(GREEN)✅ CI pipeline complete$(NC)"
 
@@ -262,8 +278,8 @@ watch: ## Watch for changes and rebuild
 
 logs: ## Show recent logs (if applicable)
 	@echo "$(BLUE)Recent logs:$(NC)"
-	@if [ -d "examples/.pulumi" ]; then \
-		cd examples && pulumi logs --follow=false; \
+	@if [ -f "examples/Pulumi.yaml" ]; then \
+		cd examples && PULUMI_CONFIG_PASSPHRASE="dev" pulumi logs --follow=false; \
 	else \
 		echo "$(YELLOW)No logs available. Deploy infrastructure first.$(NC)"; \
 	fi 
