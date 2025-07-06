@@ -64,20 +64,17 @@ make ci
 make build                           # Build TypeScript
 make test                           # Run all tests
 make lint                           # Run linting
-make validate                       # Validate Pulumi infrastructure
+make preview-local                  # Preview infrastructure against LocalStack
 
 # Run tests separately:
-npm run test:unit                    # Unit tests only
-npm run test:integration:local       # Integration tests with LocalStack
+make test-unit                       # Unit tests only
+make test-integration-local          # Integration tests with LocalStack
 ```
 
 Make sure your code compiles and works as expected:
 
 ```bash
-# Validate infrastructure plan
-make validate
-
-# Preview against LocalStack (no costs)
+# Preview infrastructure against LocalStack (no costs)
 make preview-local
 
 # Preview against real AWS (requires credentials)
@@ -123,7 +120,7 @@ Go to the GitHub repo and open a PR targeting `main`. Fill in the template and d
 make localstack-start
 
 # Watch for changes and run tests
-npm run test:watch
+make test-watch
 
 # Check LocalStack status anytime
 make localstack-status
@@ -144,7 +141,7 @@ make localstack-stop
 - Unit tests should be fast and test logic without external dependencies
 - Integration tests should verify actual AWS resource creation/configuration
 - Use environment variables or `Pulumi.<stack>.yaml` for credentials
-- Validate your code with `npm run lint && npm run build`
+- Validate your code with `make lint && make build`
 
 ### Available Make Commands
 
@@ -164,9 +161,8 @@ make test-integration    # Run integration tests
 make test-integration-local  # Run integration tests with LocalStack startup
 
 # Pulumi operations
-make validate            # Validate Pulumi program (same as CI)
 make preview             # Preview infrastructure changes
-make preview-local       # Preview against LocalStack
+make preview-local       # Preview against LocalStack (no costs)
 make up                  # Deploy infrastructure (real AWS - costs apply)
 make destroy             # Destroy infrastructure
 make stack-info          # Show stack information

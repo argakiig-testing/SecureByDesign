@@ -74,7 +74,7 @@ Internet Gateway
 ### Basic VPC
 
 ```typescript
-import { VpcComponent } from '@modinfra/vpc';
+import { VpcComponent } from '../modules/vpc';
 
 const network = new VpcComponent('main', {
   name: 'main',
@@ -88,7 +88,7 @@ export const privateSubnetIds = network.privateSubnetIds;
 ### Production VPC with High Availability
 
 ```typescript
-import { VpcComponent } from '@modinfra/vpc';
+import { VpcComponent } from '../modules/vpc';
 
 const network = new VpcComponent('production', {
   name: 'production',
@@ -106,7 +106,7 @@ const network = new VpcComponent('production', {
 ### Development VPC (Cost Optimized)
 
 ```typescript
-import { VpcComponent } from '@modinfra/vpc';
+import { VpcComponent } from '../modules/vpc';
 
 const devNetwork = new VpcComponent('dev', {
   name: 'dev',
@@ -123,7 +123,7 @@ const devNetwork = new VpcComponent('dev', {
 ### Custom CIDR with Specific Configuration
 
 ```typescript
-import { VpcComponent } from '@modinfra/vpc';
+import { VpcComponent } from '../modules/vpc';
 
 const customNetwork = new VpcComponent('custom', {
   name: 'custom',
@@ -169,8 +169,8 @@ const customNetwork = new VpcComponent('custom', {
 ### ECS Service
 
 ```typescript
-import { VpcComponent } from '@modinfra/vpc';
-import { EcsService } from '@modinfra/ecs';
+import { VpcComponent } from '../modules/vpc';
+import { EcsService } from '../modules/ecs';
 
 const network = new VpcComponent('main', { name: 'main' });
 
@@ -184,6 +184,8 @@ const service = new EcsService('app', {
 ### Application Load Balancer
 
 ```typescript
+import * as aws from '@pulumi/aws';
+
 const alb = new aws.lb.LoadBalancer('app-alb', {
   loadBalancerType: 'application',
   subnets: network.publicSubnetIds, // ALB in public subnets
@@ -196,7 +198,10 @@ const alb = new aws.lb.LoadBalancer('app-alb', {
 ### RDS Database
 
 ```typescript
-import { RdsCluster } from '@modinfra/rds';
+import { VpcComponent } from '../modules/vpc';
+import { RdsCluster } from '../modules/rds';
+
+const network = new VpcComponent('main', { name: 'main' });
 
 const database = new RdsCluster('db', {
   name: 'db',
@@ -232,10 +237,13 @@ Test VPC creation without AWS costs using LocalStack:
 make localstack-start
 
 # Run integration tests against LocalStack
-npm run test:integration
+make test-integration
 
 # Or run all tests (unit + integration)
-npm test
+make test
+
+# Preview infrastructure against LocalStack
+make preview-local
 
 # Stop LocalStack when done
 make localstack-stop
@@ -245,22 +253,22 @@ make localstack-stop
 
 ```bash
 # Run all tests (unit + integration)
-npm test
+make test
 
 # Run unit tests only (fast, mocked)
-npm run test:unit
+make test-unit
 
 # Run integration tests (requires LocalStack)
-npm run test:integration
+make test-integration
 
 # Run integration tests with automatic LocalStack setup
-npm run test:integration:local
+make test-integration-local
 
 # Run tests with coverage
-npm run test:coverage
+make test-coverage
 
 # Test specific module
-npm test -- --testNamePattern="VPC"
+make test -- --testNamePattern="VPC"
 ```
 
 ### Test Types

@@ -42,14 +42,11 @@ Examples are run through the main project's Makefile commands:
 ```bash
 # From the project root:
 
-# Validate the Pulumi configuration and preview infrastructure
-make validate
+# Preview infrastructure against LocalStack (no costs)
+make preview-local
 
 # Preview infrastructure changes
 make preview
-
-# Preview against LocalStack (no AWS costs)
-make preview-local
 
 # Deploy infrastructure (costs apply!)
 make up
@@ -273,7 +270,7 @@ make ci
 
 # Individual validation steps
 make build               # Build TypeScript and validate imports
-make validate            # Validate Pulumi infrastructure plan
+make preview-local       # Preview infrastructure against LocalStack (no costs)
 make lint                # Lint all code including examples
 
 # Test against LocalStack (no AWS costs)
@@ -283,8 +280,8 @@ make preview-local       # Preview infrastructure against LocalStack
 ### Manual Testing
 
 ```bash
-# From project root - validate Pulumi program structure
-make validate
+# From project root - preview Pulumi program structure
+make preview-local
 
 # From examples directory - preview specific changes
 cd examples

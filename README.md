@@ -13,7 +13,7 @@ This framework provides opinionated, modular Pulumi components to rapidly bootst
 
 ---
 
-## 🧱 What’s Included
+## 🧱 What's Included
 
 | Module       | Description                                            |
 | ------------ | ------------------------------------------------------ |
@@ -46,11 +46,11 @@ cd modular-pulumi-aws-framework
 make setup
 ```
 
-### 3. Validate the Framework
+### 3. Test the Framework
 
 ```bash
-# Validate Pulumi configuration and infrastructure plan
-make validate
+# Preview infrastructure against LocalStack (no AWS costs)
+make preview-local
 
 # Run complete development workflow
 make ci
@@ -59,7 +59,10 @@ make ci
 ### 4. Try the Examples
 
 ```bash
-# Preview example infrastructure
+# Preview example infrastructure against LocalStack
+make preview-local
+
+# Preview against real AWS (no costs, just preview)
 make preview
 
 # Deploy example infrastructure (optional - costs apply)
@@ -71,7 +74,7 @@ make up
 ## ✍️ Example
 
 ```ts
-import { VpcComponent } from '../modules/vpc';
+import { VpcComponent } from './modules/vpc';
 
 // Create a secure VPC with secure defaults
 const network = new VpcComponent('example', {
@@ -95,17 +98,17 @@ export const privateSubnetIds = network.privateSubnetIds;
 
 ### Development Workflow
 
-The framework includes a comprehensive development workflow with validation:
+The framework includes a comprehensive development workflow with LocalStack testing:
 
 ```bash
 # Complete development pipeline
-make ci                   # Run tests, lint, build, validate
+make ci                   # Run tests, lint, build, preview-local
 
 # Individual development steps
 make build                # Build TypeScript
 make test                 # Run all tests
 make lint                 # Run linting
-make validate             # Validate Pulumi infrastructure
+make preview-local        # Preview infrastructure against LocalStack
 ```
 
 ### Testing Without AWS Costs
@@ -117,7 +120,7 @@ This framework supports **LocalStack** for local testing without incurring AWS c
 make localstack-start
 
 # Run integration tests against LocalStack
-npm run test:integration
+make test-integration
 
 # Preview infrastructure against LocalStack
 make preview-local
@@ -129,10 +132,10 @@ make localstack-stop
 ### Available Test Commands
 
 ```bash
-npm run test              # Run all tests (unit + integration)
-npm run test:unit         # Run unit tests only
-npm run test:integration  # Run integration tests (requires LocalStack)
-npm run test:integration:local  # Run integration tests with automatic LocalStack startup
+make test                 # Run all tests (unit + integration)
+make test-unit            # Run unit tests only
+make test-integration     # Run integration tests (requires LocalStack)
+make test-integration-local  # Run integration tests with automatic LocalStack startup
 ```
 
 ### LocalStack Management
@@ -148,9 +151,8 @@ make localstack-reset     # Reset LocalStack (clean restart)
 ### Pulumi Operations
 
 ```bash
-make validate             # Validate Pulumi program (same as CI)
 make preview              # Preview infrastructure changes
-make preview-local        # Preview against LocalStack
+make preview-local        # Preview against LocalStack (no costs)
 make up                   # Deploy infrastructure (real AWS - costs apply)
 make destroy              # Destroy infrastructure
 make stack-info           # Show current stack information
@@ -163,7 +165,7 @@ make stack-info           # Show current stack information
 - **Secure Defaults**: Every module makes the secure choice the easy choice.
 - **Convention over Configuration**: Fewer options, better defaults.
 - **Auditable Outputs**: All resources are tagged and monitored.
-- **Composable Infrastructure**: Modules don’t assume your layout — they adapt to it.
+- **Composable Infrastructure**: Modules don't assume your layout — they adapt to it.
 
 ---
 
