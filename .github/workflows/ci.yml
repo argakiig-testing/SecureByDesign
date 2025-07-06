@@ -247,7 +247,7 @@ jobs:
           # Basic import performance test
           node -e "
             const start = Date.now();
-            const { VpcComponent } = require('./dist/modules/vpc');
+            const { CloudWatchComponent, VpcComponent, S3Component, IAMComponent } = require('./dist/src/index');
             const end = Date.now();
             console.log('Import time:', end - start, 'ms');
             if (end - start > 1000) {
