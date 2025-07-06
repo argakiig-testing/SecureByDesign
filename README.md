@@ -74,7 +74,7 @@ make up
 ## ✍️ Example
 
 ```ts
-import { VpcComponent } from './modules/vpc';
+import { VpcComponent } from 'modular-pulumi-aws-framework';
 
 // Create a secure VPC with secure defaults
 const network = new VpcComponent('example', {

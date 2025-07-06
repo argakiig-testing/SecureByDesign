@@ -148,22 +148,3 @@ describe('VPC Module', () => {
     });
   });
 });
-
-// Integration tests (would require actual AWS access)
-describe('VPC Integration Tests', () => {
-  // These tests would run against real AWS resources
-  // They should be skipped in CI unless AWS credentials are available
-
-  it.skip('should create real VPC resources', async () => {
-    // This would test actual resource creation
-    // Only run in integration test environment
-  });
-
-  it.skip('should properly configure routing', async () => {
-    // Test that routes are correctly configured
-  });
-
-  it.skip('should enable proper internet connectivity', async () => {
-    // Test connectivity through NAT Gateway
-  });
-});

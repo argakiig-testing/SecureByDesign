@@ -35,7 +35,7 @@ The S3 module provides a production-ready S3 bucket with security best practices
 ## Quick Start
 
 ```typescript
-import { S3Component } from '@modinfra/s3';
+import { S3Component } from 'modular-pulumi-aws-framework';
 
 // Create a basic secure bucket
 const bucket = new S3Component('documents', {
@@ -80,7 +80,7 @@ const bucket = new S3Component('kms', {
   name: 'my-kms-bucket',
   encryption: {
     sseAlgorithm: 'aws:kms',
-    kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012',
+    kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/my-key',
     bucketKeyEnabled: true,
   },
 });
@@ -92,8 +92,8 @@ const bucket = new S3Component('kms', {
 const bucket = new S3Component('versioned', {
   name: 'my-versioned-bucket',
   versioning: {
-    enabled: true, // Enable versioning (default: true)
-    mfaDelete: false, // Require MFA for deletion (default: false)
+    enabled: true,
+    mfaDelete: true, // Require MFA for permanent deletion
   },
 });
 ```
@@ -102,28 +102,19 @@ const bucket = new S3Component('versioned', {
 
 ```typescript
 const bucket = new S3Component('lifecycle', {
-  name: 'my-lifecycle-bucket',
+  name: 'my-bucket-with-lifecycle',
   lifecycleRules: [
     {
-      id: 'archive-old-data',
+      id: 'archive-old-versions',
       enabled: true,
       prefix: 'data/',
       transitions: [
-        {
-          days: 30,
-          storageClass: 'STANDARD_IA',
-        },
-        {
-          days: 90,
-          storageClass: 'GLACIER',
-        },
-        {
-          days: 365,
-          storageClass: 'DEEP_ARCHIVE',
-        },
+        { days: 30, storageClass: 'STANDARD_IA' },
+        { days: 90, storageClass: 'GLACIER' },
+        { days: 365, storageClass: 'DEEP_ARCHIVE' },
       ],
-      expiration: {
-        days: 2555, // 7 years
+      noncurrentVersionExpiration: {
+        noncurrentDays: 90,
       },
     },
   ],
@@ -137,14 +128,28 @@ const websiteBucket = new S3Component('website', {
   name: 'my-website-bucket',
   website: {
     indexDocument: 'index.html',
-    errorDocument: 'error.html',
+    errorDocument: '404.html',
   },
+  // Allow public read access for website content
+  blockPublicAcls: false,
+  blockPublicPolicy: false,
+  ignorePublicAcls: false,
+  restrictPublicBuckets: false,
+});
+```
+
+### CORS Configuration
+
+```typescript
+const apiBucket = new S3Component('api-bucket', {
+  name: 'my-api-bucket',
   corsRules: [
     {
-      allowedMethods: ['GET', 'HEAD'],
-      allowedOrigins: ['*'],
-      allowedHeaders: ['*'],
-      maxAgeSeconds: 3600,
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+      allowedOrigins: ['https://mydomain.com'],
+      exposeHeaders: ['ETag'],
+      maxAgeSeconds: 86400,
     },
   ],
 });
@@ -153,8 +158,8 @@ const websiteBucket = new S3Component('website', {
 ### Event Notifications
 
 ```typescript
-const bucket = new S3Component('notifications', {
-  name: 'my-notifications-bucket',
+const notificationBucket = new S3Component('notifications', {
+  name: 'my-notification-bucket',
   notification: {
     lambdaFunctions: [
       {
@@ -165,7 +170,7 @@ const bucket = new S3Component('notifications', {
     ],
     topics: [
       {
-        topicArn: 'arn:aws:sns:us-east-1:123456789012:my-alerts',
+        topicArn: 'arn:aws:sns:us-east-1:123456789012:bucket-notifications',
         events: ['s3:ObjectRemoved:*'],
       },
     ],
@@ -173,151 +178,13 @@ const bucket = new S3Component('notifications', {
 });
 ```
 
-### Public Access Configuration
+## Advanced Examples
+
+### Secure Data Lake Bucket
 
 ```typescript
-// Default: Block all public access (recommended)
-const secureBucket = new S3Component('secure', {
-  name: 'my-secure-bucket',
-  blockPublicAcls: true, // Block public ACLs
-  blockPublicPolicy: true, // Block public bucket policies
-  ignorePublicAcls: true, // Ignore public ACLs
-  restrictPublicBuckets: true, // Restrict public buckets
-});
+import { S3Component } from 'modular-pulumi-aws-framework';
 
-// For specific use cases requiring public access (use with caution)
-const publicBucket = new S3Component('public', {
-  name: 'my-public-bucket',
-  blockPublicAcls: false,
-  blockPublicPolicy: false,
-  ignorePublicAcls: false,
-  restrictPublicBuckets: false,
-});
-```
-
-## Security Methods
-
-### Grant Access Policies
-
-```typescript
-const bucket = new S3Component('access', {
-  name: 'my-access-bucket',
-});
-
-// Grant read access to a specific IAM principal
-const readPolicy = bucket.grantReadAccess('arn:aws:iam::123456789012:role/MyReadRole');
-
-// Grant write access
-const writePolicy = bucket.grantWriteAccess('arn:aws:iam::123456789012:role/MyWriteRole');
-
-// Grant full access
-const fullPolicy = bucket.grantFullAccess('arn:aws:iam::123456789012:role/MyAdminRole');
-```
-
-### Secure Bucket Policies
-
-```typescript
-// Create a secure policy with multiple security features
-const securePolicy = bucket.createSecurePolicy({
-  allowCloudFront: true, // Allow CloudFront access
-  allowedPrincipals: [
-    // Specific IAM principals
-    'arn:aws:iam::123456789012:role/MyRole',
-  ],
-  denyInsecureTransport: true, // Deny HTTP (require HTTPS)
-  enforceSSL: true, // Enforce SSL/TLS
-});
-```
-
-## Common Use Cases
-
-### Document Storage
-
-```typescript
-import { S3Component } from '@modinfra/s3';
-
-const documentBucket = new S3Component('documents', {
-  name: 'company-documents',
-  encryption: {
-    sseAlgorithm: 'AES256',
-  },
-  lifecycleRules: [
-    {
-      id: 'archive-old-documents',
-      enabled: true,
-      transitions: [
-        { days: 90, storageClass: 'STANDARD_IA' },
-        { days: 365, storageClass: 'GLACIER' },
-      ],
-    },
-  ],
-  tags: {
-    Environment: 'production',
-    DataClassification: 'internal',
-  },
-});
-```
-
-### Backup Storage
-
-```typescript
-const backupBucket = new S3Component('backups', {
-  name: 'system-backups',
-  versioning: {
-    enabled: true,
-    mfaDelete: true,
-  },
-  lifecycleRules: [
-    {
-      id: 'backup-lifecycle',
-      enabled: true,
-      transitions: [
-        { days: 1, storageClass: 'STANDARD_IA' },
-        { days: 7, storageClass: 'GLACIER' },
-        { days: 30, storageClass: 'DEEP_ARCHIVE' },
-      ],
-      expiration: { days: 2555 }, // 7 years
-    },
-  ],
-  notification: {
-    topics: [
-      {
-        topicArn: 'arn:aws:sns:us-east-1:123456789012:backup-alerts',
-        events: ['s3:ObjectCreated:*', 's3:ObjectRemoved:*'],
-      },
-    ],
-  },
-});
-```
-
-### Static Website
-
-```typescript
-const websiteBucket = new S3Component('website', {
-  name: 'company-website',
-  website: {
-    indexDocument: 'index.html',
-    errorDocument: 'error.html',
-  },
-  corsRules: [
-    {
-      allowedMethods: ['GET', 'HEAD'],
-      allowedOrigins: ['https://example.com'],
-      maxAgeSeconds: 3600,
-    },
-  ],
-});
-
-// Use with CloudFront for better security and performance
-const cloudfrontPolicy = websiteBucket.createSecurePolicy({
-  allowCloudFront: true,
-  denyInsecureTransport: true,
-});
-```
-
-### Data Lake Storage
-
-```typescript
 const dataLakeBucket = new S3Component('data-lake', {
   name: 'company-data-lake',
   encryption: {
@@ -369,7 +236,7 @@ The S3 module enforces secure defaults:
 ### Bucket Naming Security
 
 ```typescript
-import { validateBucketName, generateSecureBucketName } from '@modinfra/s3';
+import { validateBucketName, generateSecureBucketName } from 'modular-pulumi-aws-framework';
 
 // Validate bucket names before use
 const validation = validateBucketName('my-bucket-name');
@@ -393,91 +260,54 @@ const bucket = new S3Component('secure', {
 const readOnlyAccess = bucket.grantReadAccess('arn:aws:iam::123456789012:role/ReadOnlyRole');
 
 // Use conditions in bucket policies
-const conditionalPolicy = bucket.createSecurePolicy({
+const customPolicy = bucket.createSecurePolicy({
+  allowCloudFront: true,
   denyInsecureTransport: true,
   enforceSSL: true,
 });
 ```
 
-## Monitoring and Logging
+## Integration Examples
 
-### Access Logging
+### With VPC and Lambda
 
 ```typescript
-const bucket = new S3Component('logged', {
-  name: 'my-logged-bucket',
-  logging: {
-    targetBucket: 'my-access-logs-bucket',
-    targetPrefix: 'access-logs/',
-  },
+import { VpcComponent, S3Component } from 'modular-pulumi-aws-framework';
+
+const vpc = new VpcComponent('app-vpc', {
+  name: 'app-vpc',
 });
-```
 
-### Event Notifications
-
-```typescript
-const monitoredBucket = new S3Component('monitored', {
-  name: 'my-monitored-bucket',
+const dataBucket = new S3Component('data', {
+  name: 'app-data-bucket',
   notification: {
-    topics: [
-      {
-        topicArn: 'arn:aws:sns:us-east-1:123456789012:s3-events',
-        events: ['s3:ObjectCreated:*', 's3:ObjectRemoved:*', 's3:ObjectTransition'],
-      },
-    ],
     lambdaFunctions: [
       {
-        lambdaFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:s3-monitor',
-        events: ['s3:ObjectRemoved:Delete'],
-        filterPrefix: 'critical/',
+        lambdaFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:process-data',
+        events: ['s3:ObjectCreated:*'],
       },
     ],
   },
 });
 ```
 
-## Cost Optimization
-
-### Intelligent Tiering
-
-The module includes intelligent tiering by default:
+### With CloudFront
 
 ```typescript
-// Default lifecycle rules are applied automatically
-const bucket = new S3Component('cost-optimized', {
-  name: 'my-cost-optimized-bucket',
-  // Lifecycle rules are applied by default:
-  // - STANDARD_IA after 30 days
-  // - GLACIER after 90 days
-  // - DEEP_ARCHIVE after 365 days
-  // - Cleanup incomplete uploads after 7 days
-  // - Remove non-current versions after 30 days
+import { S3Component } from 'modular-pulumi-aws-framework';
+
+const websiteBucket = new S3Component('website', {
+  name: 'my-company-website',
+  website: {
+    indexDocument: 'index.html',
+    errorDocument: 'error.html',
+  },
 });
-```
 
-### Custom Lifecycle Rules
-
-```typescript
-const customBucket = new S3Component('custom-lifecycle', {
-  name: 'my-custom-bucket',
-  lifecycleRules: [
-    {
-      id: 'logs-lifecycle',
-      prefix: 'logs/',
-      enabled: true,
-      transitions: [
-        { days: 7, storageClass: 'STANDARD_IA' },
-        { days: 30, storageClass: 'GLACIER' },
-      ],
-      expiration: { days: 365 },
-    },
-    {
-      id: 'temp-cleanup',
-      prefix: 'temp/',
-      enabled: true,
-      expiration: { days: 1 },
-    },
-  ],
+// Create CloudFront-friendly bucket policy
+const cloudFrontPolicy = websiteBucket.createSecurePolicy({
+  allowCloudFront: true,
+  denyInsecureTransport: true,
 });
 ```
 
@@ -485,7 +315,7 @@ const customBucket = new S3Component('custom-lifecycle', {
 
 ### S3Component
 
-Main component class for creating S3 buckets.
+Main class for creating S3 buckets with secure defaults.
 
 #### Constructor
 
@@ -495,62 +325,231 @@ new S3Component(name: string, args: S3Args, opts?: ComponentResourceOptions)
 
 #### Properties
 
-| Property            | Type                                               | Description                       |
-| ------------------- | -------------------------------------------------- | --------------------------------- |
-| `bucket`            | `aws.s3.Bucket`                                    | The underlying S3 bucket resource |
-| `publicAccessBlock` | `aws.s3.BucketPublicAccessBlock`                   | Public access block configuration |
-| `encryption`        | `aws.s3.BucketServerSideEncryptionConfigurationV2` | Encryption configuration          |
-| `versioning`        | `aws.s3.BucketVersioningV2`                        | Versioning configuration          |
-| `lifecycle`         | `aws.s3.BucketLifecycleConfigurationV2`            | Lifecycle configuration           |
-| `bucketName`        | `pulumi.Output<string>`                            | The bucket name                   |
-| `bucketArn`         | `pulumi.Output<string>`                            | The bucket ARN                    |
-| `bucketDomainName`  | `pulumi.Output<string>`                            | The bucket domain name            |
+| Property                       | Type                      | Description                        |
+| ------------------------------ | ------------------------- | ---------------------------------- |
+| `bucket`                       | `aws.s3.Bucket`          | The S3 bucket resource            |
+| `publicAccessBlock`            | `BucketPublicAccessBlock` | Public access block configuration |
+| `encryption`                   | `BucketEncryption`        | Encryption configuration           |
+| `versioning`                   | `BucketVersioning`        | Versioning configuration           |
+| `bucketName`                   | `Output<string>`          | The bucket name                    |
+| `bucketArn`                    | `Output<string>`          | The bucket ARN                     |
+| `bucketDomainName`             | `Output<string>`          | The bucket domain name             |
+| `bucketRegionalDomainName`     | `Output<string>`          | Regional domain name               |
+| `websiteEndpoint` (optional)   | `Output<string>`          | Website endpoint (if enabled)      |
+| `websiteDomain` (optional)     | `Output<string>`          | Website domain (if enabled)        |
 
 #### Methods
 
-| Method                           | Description                       |
-| -------------------------------- | --------------------------------- |
-| `createSecurePolicy(options)`    | Create a secure bucket policy     |
-| `grantReadAccess(principalArn)`  | Grant read access to a principal  |
-| `grantWriteAccess(principalArn)` | Grant write access to a principal |
-| `grantFullAccess(principalArn)`  | Grant full access to a principal  |
+##### `createSecurePolicy(options)`
 
-### Types
+Creates a secure bucket policy with common security controls.
 
-See the [types documentation](./types.ts) for complete type definitions.
-
-### Defaults
-
-See the [defaults documentation](./defaults.ts) for all default configurations and utilities.
-
-## Examples
-
-Complete examples are available in the [examples directory](../../examples/s3/):
-
-- [Basic Bucket](../../examples/s3/basic-bucket.ts) - Simple secure bucket
-- [Advanced Bucket](../../examples/s3/advanced-bucket.ts) - Custom configuration
-- [Website Bucket](../../examples/s3/website-bucket.ts) - Static website hosting
-- [Backup Bucket](../../examples/s3/backup-bucket.ts) - Backup and archival
-
-## Testing
-
-The module includes comprehensive test coverage:
-
-```bash
-# Run unit tests
-npm run test:unit
-
-# Run integration tests (requires LocalStack)
-npm run test:integration
-
-# Run all tests
-npm test
+```typescript
+bucket.createSecurePolicy({
+  allowCloudFront?: boolean;
+  allowedPrincipals?: string[];
+  denyInsecureTransport?: boolean;
+  enforceSSL?: boolean;
+})
 ```
 
-## Contributing
+##### `grantReadAccess(principalArn)`
 
-Please see the main [CONTRIBUTING.md](../../CONTRIBUTING.md) for contribution guidelines.
+Grants read access to the bucket for the specified principal.
 
-## License
+```typescript
+bucket.grantReadAccess('arn:aws:iam::123456789012:role/ReadOnlyRole');
+```
 
-This module is part of the Modular Pulumi AWS Framework and is licensed under the MIT License.
+##### `grantWriteAccess(principalArn)`
+
+Grants write access to the bucket for the specified principal.
+
+```typescript
+bucket.grantWriteAccess('arn:aws:iam::123456789012:role/DataProcessor');
+```
+
+##### `grantFullAccess(principalArn)`
+
+Grants full access to the bucket for the specified principal.
+
+```typescript
+bucket.grantFullAccess('arn:aws:iam::123456789012:role/AdminRole');
+```
+
+## Utility Functions
+
+### `validateBucketName(name)`
+
+Validates a bucket name against AWS requirements.
+
+```typescript
+const validation = validateBucketName('my-bucket-name');
+if (!validation.isValid) {
+  console.error('Invalid bucket name:', validation.errors);
+}
+```
+
+### `generateSecureBucketName(baseName)`
+
+Generates a secure, globally unique bucket name.
+
+```typescript
+const bucketName = generateSecureBucketName('my-app');
+// Returns: "my-app-1a2b3c4d-xyz123"
+```
+
+### `createSecureBucketPolicy(bucketName, options)`
+
+Creates a secure bucket policy JSON string.
+
+```typescript
+const policy = createSecureBucketPolicy('my-bucket', {
+  allowCloudFront: true,
+  denyInsecureTransport: true,
+});
+```
+
+## Best Practices
+
+### Performance
+
+1. **Use the right storage class** for your access patterns
+2. **Enable transfer acceleration** for global access
+3. **Use multipart uploads** for large objects
+4. **Implement proper caching** with CloudFront
+
+### Cost Optimization
+
+1. **Set up lifecycle rules** to automatically transition old data
+2. **Use Intelligent-Tiering** for unpredictable access patterns
+3. **Monitor and analyze** access patterns regularly
+4. **Clean up incomplete multipart uploads**
+
+### Security
+
+1. **Always use HTTPS** for bucket access
+2. **Enable versioning** for critical data
+3. **Use bucket policies** to restrict access
+4. **Enable access logging** for audit trails
+5. **Regularly review** bucket permissions
+
+### Compliance
+
+1. **Enable object lock** for regulatory compliance
+2. **Use MFA delete** for critical buckets
+3. **Implement proper** data retention policies
+4. **Document data** classification and handling
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Bucket Name Already Exists
+
+**Problem**: `BucketAlreadyExists` error
+
+**Solution**: Use `generateSecureBucketName()` or choose a unique name
+
+```typescript
+import { generateSecureBucketName, validateBucketName } from 'modular-pulumi-aws-framework';
+
+const bucketName = generateSecureBucketName('my-app');
+const validation = validateBucketName(bucketName);
+if (!validation.isValid) {
+  console.error('Invalid bucket name:', validation.errors);
+}
+```
+
+#### 2. Access Denied Errors
+
+**Problem**: Cannot access bucket objects
+
+**Solution**: Check bucket policy and IAM permissions
+
+```typescript
+// Grant appropriate access
+const readAccess = bucket.grantReadAccess('arn:aws:iam::123456789012:role/MyRole');
+
+// Or create a comprehensive policy
+const policy = bucket.createSecurePolicy({
+  allowedPrincipals: ['arn:aws:iam::123456789012:role/MyRole'],
+  denyInsecureTransport: true,
+});
+```
+
+#### 3. CORS Issues
+
+**Problem**: Cross-origin requests blocked
+
+**Solution**: Configure CORS rules properly
+
+```typescript
+const bucket = new S3Component('web-assets', {
+  name: 'my-web-assets',
+  corsRules: [
+    {
+      allowedOrigins: ['https://mydomain.com'],
+      allowedMethods: ['GET', 'HEAD'],
+      allowedHeaders: ['*'],
+      maxAgeSeconds: 3600,
+    },
+  ],
+});
+```
+
+#### 4. Lifecycle Rules Not Working
+
+**Problem**: Objects not transitioning as expected
+
+**Solution**: Check rule configuration and object tags
+
+```typescript
+const bucket = new S3Component('archived', {
+  name: 'my-archived-bucket',
+  lifecycleRules: [
+    {
+      id: 'archive-rule',
+      enabled: true, // Make sure it's enabled
+      prefix: 'archive/', // Check prefix matches your objects
+      transitions: [
+        { days: 30, storageClass: 'STANDARD_IA' },
+      ],
+    },
+  ],
+});
+```
+
+## Performance Optimization
+
+### Large File Uploads
+
+```typescript
+// Configure multipart upload threshold
+const bucket = new S3Component('uploads', {
+  name: 'large-file-uploads',
+  // Enable transfer acceleration
+  accelerationStatus: 'Enabled',
+});
+```
+
+### CloudFront Integration
+
+```typescript
+const websiteBucket = new S3Component('cdn', {
+  name: 'my-cdn-bucket',
+  website: {
+    indexDocument: 'index.html',
+  },
+});
+
+// Create CloudFront-optimized policy
+const cdnPolicy = websiteBucket.createSecurePolicy({
+  allowCloudFront: true,
+  enforceSSL: true,
+});
+```
+
+---
+
+For additional questions or support, please refer to the [AWS S3 documentation](https://docs.aws.amazon.com/s3/) or open an issue in the repository.

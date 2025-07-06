@@ -9,7 +9,7 @@
  *
  * @example
  * ```typescript
- * import { VpcComponent } from '@modinfra/vpc';
+ * import { VpcComponent } from 'modular-pulumi-aws-framework';
  *
  * const network = new VpcComponent('main', {
  *   name: 'main',

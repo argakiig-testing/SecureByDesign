@@ -74,7 +74,7 @@ Internet Gateway
 ### Basic VPC
 
 ```typescript
-import { VpcComponent } from '../modules/vpc';
+import { VpcComponent } from 'modular-pulumi-aws-framework';
 
 const network = new VpcComponent('main', {
   name: 'main',
@@ -88,7 +88,7 @@ export const privateSubnetIds = network.privateSubnetIds;
 ### Production VPC with High Availability
 
 ```typescript
-import { VpcComponent } from '../modules/vpc';
+import { VpcComponent } from 'modular-pulumi-aws-framework';
 
 const network = new VpcComponent('production', {
   name: 'production',
@@ -106,7 +106,7 @@ const network = new VpcComponent('production', {
 ### Development VPC (Cost Optimized)
 
 ```typescript
-import { VpcComponent } from '../modules/vpc';
+import { VpcComponent } from 'modular-pulumi-aws-framework';
 
 const devNetwork = new VpcComponent('dev', {
   name: 'dev',
@@ -123,7 +123,7 @@ const devNetwork = new VpcComponent('dev', {
 ### Custom CIDR with Specific Configuration
 
 ```typescript
-import { VpcComponent } from '../modules/vpc';
+import { VpcComponent } from 'modular-pulumi-aws-framework';
 
 const customNetwork = new VpcComponent('custom', {
   name: 'custom',
@@ -169,8 +169,7 @@ const customNetwork = new VpcComponent('custom', {
 ### ECS Service
 
 ```typescript
-import { VpcComponent } from '../modules/vpc';
-import { EcsService } from '../modules/ecs';
+import { VpcComponent, EcsService } from 'modular-pulumi-aws-framework';
 
 const network = new VpcComponent('main', { name: 'main' });
 
@@ -184,7 +183,10 @@ const service = new EcsService('app', {
 ### Application Load Balancer
 
 ```typescript
+import { VpcComponent } from 'modular-pulumi-aws-framework';
 import * as aws from '@pulumi/aws';
+
+const network = new VpcComponent('main', { name: 'main' });
 
 const alb = new aws.lb.LoadBalancer('app-alb', {
   loadBalancerType: 'application',
@@ -198,8 +200,7 @@ const alb = new aws.lb.LoadBalancer('app-alb', {
 ### RDS Database
 
 ```typescript
-import { VpcComponent } from '../modules/vpc';
-import { RdsCluster } from '../modules/rds';
+import { VpcComponent, RdsCluster } from 'modular-pulumi-aws-framework';
 
 const network = new VpcComponent('main', { name: 'main' });
 

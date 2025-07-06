@@ -11,7 +11,7 @@
  *
  * @example
  * ```typescript
- * import { S3Component } from '@modinfra/s3';
+ * import { S3Component } from 'modular-pulumi-aws-framework';
  *
  * // Basic secure bucket
  * const bucket = new S3Component('documents', {
