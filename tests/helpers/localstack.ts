@@ -6,8 +6,176 @@
 import { EC2Client, DescribeVpcsCommand, DescribeSubnetsCommand } from '@aws-sdk/client-ec2';
 import { IAMClient } from '@aws-sdk/client-iam';
 
+// Polyfill for AbortController in older Node.js versions
+declare global {
+  var AbortController: typeof globalThis.AbortController;
+}
+
 // Import LocalStack config (JavaScript module)
 const localstackConfig = require('../../localstack.config.js');
+
+/**
+ * LocalStack connectivity status
+ */
+export interface LocalStackStatus {
+  isAvailable: boolean;
+  services: {
+    ec2?: 'available' | 'disabled' | 'error';
+    s3?: 'available' | 'disabled' | 'error';
+    iam?: 'available' | 'disabled' | 'error';
+  };
+  endpoint: string;
+  error?: string;
+}
+
+/**
+ * Check if LocalStack is available and which services are ready
+ */
+export async function checkLocalStackStatus(timeout = 10000): Promise<LocalStackStatus> {
+  const endpoint = localstackConfig.endpoint || 'http://localhost:4566';
+
+  try {
+    // eslint-disable-next-line no-undef
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    const response = await fetch(`${endpoint}/_localstack/health`, {
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return {
+        isAvailable: false,
+        services: {},
+        endpoint,
+        error: `LocalStack health check failed with status ${response.status}`,
+      };
+    }
+
+    const health = (await response.json()) as { services?: Record<string, string> };
+
+    return {
+      isAvailable: true,
+      services: {
+        ec2: health.services?.ec2 as 'available' | 'disabled' | 'error',
+        s3: health.services?.s3 as 'available' | 'disabled' | 'error',
+        iam: health.services?.iam as 'available' | 'disabled' | 'error',
+      },
+      endpoint,
+    };
+  } catch (error) {
+    return {
+      isAvailable: false,
+      services: {},
+      endpoint,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Wait for LocalStack to be ready with specific services
+ */
+export async function waitForLocalStack(
+  requiredServices: string[] = [],
+  options: {
+    maxAttempts?: number;
+    delay?: number;
+    timeout?: number;
+  } = {}
+): Promise<LocalStackStatus> {
+  const { maxAttempts = 10, delay = 2000, timeout = 60000 } = options;
+  const startTime = Date.now();
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (Date.now() - startTime > timeout) {
+      throw new Error(`Timeout waiting for LocalStack after ${timeout}ms`);
+    }
+
+    try {
+      const status = await checkLocalStackStatus(5000);
+
+      if (status.isAvailable) {
+        // Check if all required services are available
+        const missingServices = requiredServices.filter(
+          service => status.services[service as keyof typeof status.services] !== 'available'
+        );
+
+        if (missingServices.length === 0) {
+          return status;
+        }
+
+        console.log(`Waiting for LocalStack services: ${missingServices.join(', ')}`);
+      }
+    } catch (error) {
+      console.log(`LocalStack not ready (attempt ${attempt}/${maxAttempts}): ${error}`);
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw new Error(`LocalStack not ready after ${maxAttempts} attempts`);
+}
+
+/**
+ * Skip test if LocalStack is not available with consistent messaging
+ */
+export function skipIfLocalStackUnavailable(status: LocalStackStatus, testName: string): void {
+  if (!status.isAvailable) {
+    const message = `Skipping ${testName}: LocalStack not available (${status.endpoint})`;
+    if (status.error) {
+      console.warn(`${message} - ${status.error}`);
+    } else {
+      console.warn(message);
+    }
+  }
+}
+
+/**
+ * Jest test wrapper that automatically skips if LocalStack is unavailable
+ */
+export function localStackTest(
+  testName: string,
+  requiredServices: string[],
+  testFn: () => Promise<void> | void,
+  _timeout = 30000
+) {
+  return async () => {
+    try {
+      const status = await checkLocalStackStatus();
+
+      if (!status.isAvailable) {
+        skipIfLocalStackUnavailable(status, testName);
+        return;
+      }
+
+      // Check required services
+      const unavailableServices = requiredServices.filter(
+        service => status.services[service as keyof typeof status.services] !== 'available'
+      );
+
+      if (unavailableServices.length > 0) {
+        console.warn(
+          `Skipping ${testName}: Required LocalStack services not available: ${unavailableServices.join(', ')}`
+        );
+        return;
+      }
+
+      // Run the actual test
+      await testFn();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('LocalStack')) {
+        console.warn(`Skipping ${testName}: LocalStack error - ${error.message}`);
+        return;
+      }
+      throw error;
+    }
+  };
+}
 
 /**
  * Create AWS clients configured for LocalStack

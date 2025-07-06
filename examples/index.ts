@@ -16,3 +16,9 @@ export * from './s3/basic-bucket';
 export * from './s3/advanced-bucket';
 export * from './s3/website-bucket';
 export * from './s3/backup-bucket';
+
+// IAM Examples
+export * as basicRoles from './iam/basic-roles';
+export * as serviceRoles from './iam/service-roles';
+export * as crossAccountAccess from './iam/cross-account-access';
+export * as customPolicies from './iam/custom-policies';

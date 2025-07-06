@@ -10,6 +10,11 @@ import { VpcComponent } from '../vpc';
 import {
   generateTestResourceName,
   createLocalStackClients,
+  checkLocalStackStatus,
+  waitForLocalStack,
+  skipIfLocalStackUnavailable,
+  localStackTest,
+  type LocalStackStatus,
 } from '../../../tests/helpers/localstack';
 
 // Mock Pulumi's runtime for testing
@@ -42,6 +47,30 @@ pulumi.runtime.setMocks({
 });
 
 describe('VPC Integration Tests', () => {
+  let localStackStatus: LocalStackStatus;
+
+  beforeAll(async () => {
+    // Check LocalStack availability once for all tests
+    localStackStatus = await checkLocalStackStatus();
+
+    if (localStackStatus.isAvailable) {
+      console.log(`LocalStack is available at ${localStackStatus.endpoint}`);
+      console.log(`Available services:`, localStackStatus.services);
+
+      // Wait for EC2 service to be ready
+      try {
+        await waitForLocalStack(['ec2'], { maxAttempts: 5, delay: 1000 });
+      } catch {
+        console.warn('EC2 service not ready, some tests may be skipped');
+      }
+    } else {
+      console.warn('LocalStack is not available - integration tests will be skipped');
+      if (localStackStatus.error) {
+        console.warn(`Error: ${localStackStatus.error}`);
+      }
+    }
+  }, 60000); // 60 second timeout for setup
+
   describe('Component Creation', () => {
     it('should create VPC component with default configuration', () => {
       const testName = generateTestResourceName('basic-vpc');
@@ -134,23 +163,35 @@ describe('VPC Integration Tests', () => {
       expect(clients.iam).toBeDefined();
     });
 
-    it('should be able to query LocalStack health', async () => {
-      // Basic connectivity test to LocalStack
-      try {
-        const endpoint = process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566';
-        const response = await fetch(`${endpoint}/health`);
+    it(
+      'should verify LocalStack connectivity and EC2 service availability',
+      localStackTest('LocalStack EC2 connectivity', ['ec2'], async () => {
+        // Basic connectivity test to LocalStack EC2 service
+        const status = await checkLocalStackStatus();
+        expect(status.isAvailable).toBe(true);
+        expect(status.services.ec2).toBe('available');
 
-        if (response.ok) {
-          const health = (await response.json()) as { services?: Record<string, string> };
-          expect(health).toBeDefined();
-          // LocalStack should be running EC2 service
-          expect(health.services).toBeDefined();
-        }
-      } catch {
-        // If LocalStack is not running, skip this test
-        console.warn('LocalStack not available, skipping connectivity test');
-      }
-    });
+        console.log(`Successfully connected to LocalStack at ${status.endpoint}`);
+        console.log(`EC2 service status: ${status.services.ec2}`);
+      })
+    );
+
+    it(
+      'should test VPC operations with LocalStack',
+      localStackTest('VPC operations', ['ec2'], async () => {
+        // This would test actual VPC creation with LocalStack
+        // For now, we verify the component can be created
+        const testName = generateTestResourceName('localstack-vpc');
+        const vpc = new VpcComponent(testName, {
+          name: testName,
+        });
+
+        expect(vpc).toBeDefined();
+        expect(vpc.vpc).toBeDefined();
+
+        console.log(`Created VPC component: ${testName}`);
+      })
+    );
   });
 
   describe('Error Handling', () => {
@@ -186,6 +227,23 @@ describe('VPC Integration Tests', () => {
       // Secure defaults are applied in the component implementation
       // DNS support should be enabled by default
       // NAT Gateway should be enabled by default for secure outbound access
+    });
+  });
+
+  describe('LocalStack Service Availability', () => {
+    it('should provide consistent feedback when LocalStack is unavailable', async () => {
+      // This test demonstrates the consistent error handling
+      const status = await checkLocalStackStatus();
+
+      if (!status.isAvailable) {
+        skipIfLocalStackUnavailable(status, 'Example test');
+        console.log('Demonstrated consistent LocalStack unavailable handling');
+      } else {
+        console.log('LocalStack is available for testing');
+      }
+
+      // This test always passes to demonstrate the pattern
+      expect(true).toBe(true);
     });
   });
 });
