@@ -5,10 +5,10 @@
 
 // Export implemented modules
 export * from '../modules/vpc';
+export * from '../modules/s3';
 
 // Additional modules will be exported as they are implemented:
 // export * from '../modules/ecs';
-// export * from '../modules/s3';
 // export * from '../modules/iam';
 // export * from '../modules/rds';
 // export * from '../modules/cloudfront';

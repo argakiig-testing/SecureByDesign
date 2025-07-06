@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@pulumi/pulumi": "^3.112.0",
-    "@pulumi/aws": "^6.83.0"
+    "@pulumi/aws": "^6.83.0",
+    "modular-pulumi-aws-framework": "file:.."
   },
   "devDependencies": {
     "typescript": "^5.8.3",

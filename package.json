@@ -2,8 +2,8 @@
   "name": "modular-pulumi-aws-framework",
   "version": "0.1.0",
   "description": "Secure-by-default AWS infrastructure made simple with Pulumi",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

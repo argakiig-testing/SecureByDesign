@@ -1,9 +1,18 @@
 /**
- * Pulumi Examples Entry Point
+ * Examples for the Modular Pulumi AWS Framework
  *
- * This file serves as the main entry point for Pulumi examples.
- * Import and run your desired example here.
+ * This directory contains working examples demonstrating how to use
+ * the various modules in real-world scenarios.
  */
 
-// Import the basic VPC example
-export * from './basic-vpc';
+// VPC Examples
+export * from './vpc/basic-vpc';
+export * from './vpc/advanced-vpc';
+export * from './vpc/multi-region-vpc';
+export * from './vpc/cost-optimized-vpc';
+
+// S3 Examples
+export * from './s3/basic-bucket';
+export * from './s3/advanced-bucket';
+export * from './s3/website-bucket';
+export * from './s3/backup-bucket';
