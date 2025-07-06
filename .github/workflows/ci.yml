@@ -14,6 +14,14 @@ concurrency:
 env:
   NODE_VERSION: '18'
 
+# Explicitly define permissions for security best practices
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+  id-token: write # Required for Codecov OIDC
+
 jobs:
   # Job 1: Quality checks (linting, formatting, security)
   quality:
