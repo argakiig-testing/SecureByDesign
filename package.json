@@ -39,7 +39,7 @@
   "devDependencies": {
     "@aws-sdk/client-cloudwatch": "^3.841.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.840.0",
-    "@aws-sdk/client-ec2": "^3.842.0",
+    "@aws-sdk/client-ec2": "^3.843.0",
     "@aws-sdk/client-iam": "^3.840.0",
     "@aws-sdk/client-sns": "^3.840.0",
     "@types/jest": "^30.0.0",
