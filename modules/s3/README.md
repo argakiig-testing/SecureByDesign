@@ -325,18 +325,18 @@ new S3Component(name: string, args: S3Args, opts?: ComponentResourceOptions)
 
 #### Properties
 
-| Property                       | Type                      | Description                        |
-| ------------------------------ | ------------------------- | ---------------------------------- |
-| `bucket`                       | `aws.s3.Bucket`          | The S3 bucket resource            |
-| `publicAccessBlock`            | `BucketPublicAccessBlock` | Public access block configuration |
-| `encryption`                   | `BucketEncryption`        | Encryption configuration           |
-| `versioning`                   | `BucketVersioning`        | Versioning configuration           |
-| `bucketName`                   | `Output<string>`          | The bucket name                    |
-| `bucketArn`                    | `Output<string>`          | The bucket ARN                     |
-| `bucketDomainName`             | `Output<string>`          | The bucket domain name             |
-| `bucketRegionalDomainName`     | `Output<string>`          | Regional domain name               |
-| `websiteEndpoint` (optional)   | `Output<string>`          | Website endpoint (if enabled)      |
-| `websiteDomain` (optional)     | `Output<string>`          | Website domain (if enabled)        |
+| Property                     | Type                      | Description                       |
+| ---------------------------- | ------------------------- | --------------------------------- |
+| `bucket`                     | `aws.s3.Bucket`           | The S3 bucket resource            |
+| `publicAccessBlock`          | `BucketPublicAccessBlock` | Public access block configuration |
+| `encryption`                 | `BucketEncryption`        | Encryption configuration          |
+| `versioning`                 | `BucketVersioning`        | Versioning configuration          |
+| `bucketName`                 | `Output<string>`          | The bucket name                   |
+| `bucketArn`                  | `Output<string>`          | The bucket ARN                    |
+| `bucketDomainName`           | `Output<string>`          | The bucket domain name            |
+| `bucketRegionalDomainName`   | `Output<string>`          | Regional domain name              |
+| `websiteEndpoint` (optional) | `Output<string>`          | Website endpoint (if enabled)     |
+| `websiteDomain` (optional)   | `Output<string>`          | Website domain (if enabled)       |
 
 #### Methods
 
@@ -512,9 +512,7 @@ const bucket = new S3Component('archived', {
       id: 'archive-rule',
       enabled: true, // Make sure it's enabled
       prefix: 'archive/', // Check prefix matches your objects
-      transitions: [
-        { days: 30, storageClass: 'STANDARD_IA' },
-      ],
+      transitions: [{ days: 30, storageClass: 'STANDARD_IA' }],
     },
   ],
 });
