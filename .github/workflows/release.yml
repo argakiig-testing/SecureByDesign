@@ -122,7 +122,7 @@ jobs:
           tar -czf modular-pulumi-aws-framework-${{ needs.validate.outputs.version }}.tar.gz -C release-package .
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: release-artifacts-${{ needs.validate.outputs.version }}
           path: |
